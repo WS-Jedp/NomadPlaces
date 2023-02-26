@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { environments } from './config/environmets'
 import { PlacesModule } from './places/places.module';
 import { PrismaService } from './global/prisma-service/prisma-service.service';
+import { DistanceService } from './global/distance/distance.service';
 import config from './config'
 
 const DEFAULT_ENV_FILE_PATH = '.env'
@@ -26,6 +27,6 @@ const DEFAULT_ENV_FILE_PATH = '.env'
     })
   }), PlacesModule],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, DistanceService],
 })
 export class AppModule {}
