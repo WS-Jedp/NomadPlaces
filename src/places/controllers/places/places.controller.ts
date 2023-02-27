@@ -1,4 +1,7 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { PlaceMongoEntity } from 'src/global/entities/place';
+import Response from 'src/global/models/response';
+import { PlaceEntityHelper } from 'src/places/helpers/PlaceHelper.dto';
 import { PlacesService } from 'src/places/services/places/places.service';
 @Controller('places')
 export class PlacesController {
@@ -24,8 +27,10 @@ export class PlacesController {
     @Get('near')
     async getNearToMe(@Query() searchData: { latitude: number, longitude: number, maxDistance?: number, minDistance?: number }) {
         const { latitude, longitude, maxDistance = 500, minDistance = 10 } = searchData
-        const nearPlaces = await this.placesService.findNearestToLocation(maxDistance, minDistance, { latitude, longitude })
-        return nearPlaces
+        return new Response({
+            content: await this.placesService.getNearestPlacesToLocation(maxDistance, minDistance, { latitude, longitude }),
+            status: HttpStatus.OK
+        })
     }
 
     @Get('detail/:id')
@@ -34,8 +39,11 @@ export class PlacesController {
             // Place Session
             // Place main reviews
             // Place guides
-        const currentPlace = await this.placesService.findOne(id)
-        return currentPlace
+        const currentPlace = await this.placesService.getPlace(id)
+        return new Response({
+            content: currentPlace,
+            status: HttpStatus.OK
+        })
     } 
 
     @Get()

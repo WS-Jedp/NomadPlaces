@@ -1,40 +1,39 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
+import { PlaceMongoEntity } from 'src/global/entities/place';
 import { Coordinates } from 'src/global/types';
+import { PlaceEntityHelper } from 'src/places/helpers/PlaceHelper.dto';
+import { PlaceRepository } from 'src/places/repository/place.repository';
 
 @Injectable()
 export class PlacesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private placeRepository: PlaceRepository
+    ) {}
 
   // Create actions
 
   // Read actions
-  getAll() {
-    return this.prisma.places.findMany();
+  async getAll() {
+    const places = await this.placeRepository.getAll();
+    return {
+      places
+    }
   }
 
-  findOne(id: string) {
-    return this.prisma.places.findUnique({
-      where: {
-        id: id,
-      }    
-    });
+  async getPlace(id: string) {
+    const place = await this.placeRepository.findOne(id)
+    return {
+      place
+    }
   }
 
-  findNearestToLocation(maxDistance:number, minDistance: number, currentLocation: Coordinates) {
-    return this.prisma.places.findRaw({
-        filter: {
-          location: {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: [Number(currentLocation.latitude), Number(currentLocation.longitude)],
-              },
-              $maxDistance: Number(maxDistance), // In meters
-              $minDistance: Number(minDistance), // In meters
-            },
-          },
-        },
-      });
+  async getNearestPlacesToLocation(maxDistance:number, minDistance: number, currentLocation: Coordinates) {
+    if(!maxDistance) maxDistance = 500
+    if(!minDistance) maxDistance = 0
+
+    const nearestPlaces = await this.placeRepository.findNearestToLocation(maxDistance, minDistance, currentLocation)
+    return {
+      places: nearestPlaces.map(place => PlaceEntityHelper.MongoEntityToDTO(place))
+    }
   }
 }
