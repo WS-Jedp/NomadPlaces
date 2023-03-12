@@ -48,7 +48,10 @@ export class PlacesController {
 
     @Get()
     async getAll() {
-       return await this.placesService.getAll()
+       return new Response({
+        content: await this.placesService.getAll(),
+        status: HttpStatus.OK
+       })
     }
 
     /**
