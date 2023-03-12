@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Places {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  multimedia  String[]
+  type        PlaceTypes[]
+  location    Location
+  commodities Commodities
+  rules       PlaceRules
+}
+
+type Commodities {
+  publicWifi  Boolean?
+  wifiSpeed   Int?
+  parking     Boolean?
+  publicPlugs Boolean?
+  plugsAmount Int?
+  coworkSpace Boolean?
+}
+
+type PlaceRules {
+  openAt      String
+  closedAt    String
+  petFriendly Boolean?
+  smoking     Boolean?
+  underAge    Boolean?
+}
+
+type PlaceTypes {
+  COFFEE    String
+  NIGHTCLUB String
+  BAR       String
+}
+
+type Location {
+  latitude  Float
+  longitude Float
+  city      String?
+  country   String?
+}
