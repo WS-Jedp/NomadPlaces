@@ -10,8 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                String                @id @default(auto()) @map("_id") @db.ObjectId
+  name              String
+  sessions          PlaceSession[]        @relation(fields: [sessionsIDs], references: [id])
+  sessionsIDs       String[]              @db.ObjectId
+  sessionActions    PlaceSessionActions[]
+  sessionActionsIDs String                @db.ObjectId
+}
+
 model Places {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
   multimedia  String[]
@@ -19,6 +28,7 @@ model Places {
   location    Location
   commodities Commodities
   rules       PlaceRules
+  sessions    PlaceSession[]
 }
 
 type Commodities {
@@ -49,4 +59,58 @@ type Location {
   longitude Float
   city      String?
   country   String?
+}
+
+enum MULTIMEDIA_TYPE_ENUM {
+  IMAGE
+  VIDEO
+}
+
+type Multimedia {
+  url         String
+  type        MULTIMEDIA_TYPE_ENUM
+  createdDate DateTime
+}
+
+model PlaceSession {
+  id             String                @id @default(auto()) @map("_id") @db.ObjectId
+  createdDate    DateTime
+  endDate        DateTime
+  recentActivity Multimedia[]
+  place          Places                @relation(fields: [placeID], references: [id])
+  placeID        String                @db.ObjectId
+  users          User[]                @relation(fields: [usersIDs], references: [id])
+  usersIDs       String[]              @db.ObjectId
+  actions        PlaceSessionActions[]
+}
+
+model PlaceSessionActions {
+  id             String                     @id @default(auto()) @map("_id") @db.ObjectId
+  createdDate    DateTime
+  payload        Json
+  type           PLACE_SESSION_ACTIONS_ENUM
+  dayTimeSection DAY_TIME_SECTION_ENUM
+  placeSession   PlaceSession               @relation(fields: [placeSessionID], references: [id])
+  placeSessionID String                     @db.ObjectId
+  user           User                       @relation(fields: [userID], references: [id])
+  userID         String                     @db.ObjectId
+}
+
+enum DAY_TIME_SECTION_ENUM {
+  EARLY_MORNING // 12am - 3am
+  BEFORE_SUNRISE // 3am - 6am
+  SUNRISE // 6am - 9am
+  MORNING // 9am - 12pm
+  MIDDAY // 12pm - 3pm
+  AFTERNOON // 3pm - 6pm
+  NIGHT // 6pm - 9pm
+  LATE_NIGHT // 9pm - 11:59pm
+}
+
+enum PLACE_SESSION_ACTIONS_ENUM {
+  MESSAGE
+  UPDATE
+  RECENT_ACTIVITY
+  JOIN
+  LEAVE
 }

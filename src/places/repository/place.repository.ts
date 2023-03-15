@@ -14,10 +14,13 @@ export class PlaceRepository {
     return this.prisma.places.findMany();
   }
 
-  findOne(id: string) {
+  findOne(id: string, withSessions = true) {
     return this.prisma.places.findUnique({
       where: {
         id: id,
+      },
+      include: {
+        sessions: withSessions
       }
     });
   }
