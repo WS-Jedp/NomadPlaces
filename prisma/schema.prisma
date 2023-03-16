@@ -23,7 +23,7 @@ model Places {
   id          String         @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  multimedia  String[]
+  multimedia  Multimedia[]
   type        PlaceTypes[]
   location    Location
   commodities Commodities

@@ -1,11 +1,13 @@
 import { Injectable, CACHE_MANAGER, Inject  } from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { DAY_TIME_SECTION_ENUM, Multimedia, PlaceSession, PlaceSessionActions, User } from '@prisma/client';
+import { DAY_TIME_SECTION_ENUM, Multimedia, PlaceSession, PlaceSessionActions, PLACE_SESSION_ACTIONS_ENUM, User } from '@prisma/client';
 import { CreatePlaceSessionDTO } from 'src/place-sessions/dto/createPlaceSession.dto';
 import { PlaceSessionHelper } from 'src/place-sessions/dto/helpers/placeSession.helper';
 import { RegisterPlaceSessionActionDTO } from 'src/place-sessions/dto/registerAction.dto';
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
 import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCachedData.dto';
+import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
+import { UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
 
 @Injectable()
 export class PlaceSessionService {
@@ -18,6 +20,25 @@ export class PlaceSessionService {
      * --------- PLACE SESSION ACTIONS METHODS
      ************************************************************
      */
+    public async registerUserActionIntoSession(payload: {
+        sessionID: string, userID: string, actionType: PLACE_SESSION_ACTIONS_ENUM, actionPayload: Object
+    }) {
+        const currentDate = new Date()
+        const actionPayloadData = payload.actionPayload as PlaceSessionActionDataPayload[typeof payload.actionType]
+
+        const action = await this.placeSessionRepository.registerAction({
+            createdDate: currentDate,
+            dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
+            placeSessionID: payload.sessionID,
+            type: payload.actionType,
+            userID: payload.userID,
+            payload: actionPayloadData
+        })
+
+        return action
+    }
+
+
     public async registerUserIntoSession(placeID: string, userID: string) {
         const currentDate = new Date()
         const currentSession = await this.getPlaceCurrentSession(placeID, currentDate)

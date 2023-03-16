@@ -4,7 +4,7 @@ import {
   Injectable,
   NotImplementedException,
 } from '@nestjs/common';
-import { Multimedia, Places, PlaceSession, PlaceSessionActions } from '@prisma/client';
+import { Multimedia, PlaceSession } from '@prisma/client';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { RegisterPlaceSessionActionDTO } from 'src/place-sessions/dto/registerAction.dto';
 
@@ -119,8 +119,12 @@ export class PlaceSessionRepository {
         },
     })
 
-
-    return actionEntity
+    const actionWithUser = await this.prismaService.placeSessionActions.findUnique({ where: {
+      id: actionEntity.id
+    }, include: {
+      user: true,
+    } })
+    return actionWithUser
   }
 
   async findPlaceCurrentSession(placeID: string, currentDate: Date, sessionEndDate: Date) {

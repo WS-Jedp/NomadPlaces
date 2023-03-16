@@ -1,7 +1,12 @@
 import { Multimedia, PlaceSessionActions, User } from '@prisma/client';
-import { IsArray, IsDate, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 
 class PlaceSessionCachedDataDTO {
+  @IsString()
+  @IsMongoId()
+  placeID: string;
+
   @IsDate()
   @IsNotEmpty()
   lastUpdate: Date;
@@ -11,7 +16,7 @@ class PlaceSessionCachedDataDTO {
 
   @IsString()
   @IsNotEmpty()
-  bestMindsetTo: string;
+  bestMindsetTo: PLACE_MINDSET_ENUM;
 
   @IsString()
   @IsNotEmpty()
@@ -27,6 +32,7 @@ class PlaceSessionCachedDataDTO {
   usersInSession: User[]
   
   public constructor(properties: PlaceSessionCachedDataDTO) {
+    this.placeID = properties.placeID
     this.lastUpdate = properties.lastUpdate;
     this.amountOfPeople = properties.amountOfPeople;
     this.bestMindsetTo = properties.bestMindsetTo;

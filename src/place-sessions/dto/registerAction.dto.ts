@@ -1,6 +1,9 @@
 import { PLACE_SESSION_ACTIONS_ENUM, DAY_TIME_SECTION_ENUM } from '@prisma/client'
 import { IsDate, IsMongoId, IsNotEmpty, IsNotEmptyObject, IsObject, IsString,  } from 'class-validator'
+import { PlaceSessionActionDataPayload } from '../../global/models/placeSession/placeSessionActionData.model'
 
+
+type PlaceSesssionActionPayload = PlaceSessionActionDataPayload['MESSAGE'] | PlaceSessionActionDataPayload['UPDATE'] | PlaceSessionActionDataPayload['RECENT_ACTIVITY']
 class RegisterPlaceSessionActionDTO {
     @IsDate()
     @IsNotEmpty()
@@ -9,7 +12,7 @@ class RegisterPlaceSessionActionDTO {
     @IsObject()
     @IsNotEmpty()
     @IsNotEmptyObject()
-    readonly payload?: { data: any }
+    readonly payload?: PlaceSesssionActionPayload
 
     @IsString()
     @IsNotEmpty()
