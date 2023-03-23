@@ -10,6 +10,7 @@ import { PlacesModule } from './places/places.module';
 import { PrismaService } from './global/prisma-service/prisma-service.service';
 import { DistanceService } from './global/distance/distance.service';
 import { PlaceSessionsModule } from './place-sessions/place-sessions.module';
+import { StorageService } from './global/services/gcp/storage/storage.service';
 import config from './config'
 
 const DEFAULT_ENV_FILE_PATH = '.env'
@@ -29,9 +30,15 @@ const DEFAULT_ENV_FILE_PATH = '.env'
       MONGO_DATABASE_PORT: Joi.number().required(),
       MONGO_INIT_USERNAME: Joi.string().required(),
       MONGO_INIT_PASSWORD: Joi.string().required(),
+      GCP_PROJECT_ID: Joi.string().required(),
+      GCP_PRIVATE_KEY_ID: Joi.string().required(),
+      GCP_PRIVATE_KEY: Joi.string().required(),
+      GCP_CLIENT_EMAIL: Joi.string().required(),
+      GCP_MULTIMEDIA_BUCKET: Joi.string().required(),
+      GCP_JSON_FILE: Joi.string().required(),
     })
   }), PlacesModule, PlaceSessionsModule],
   controllers: [AppController],
-  providers: [AppService, PrismaService, DistanceService],
+  providers: [AppService, PrismaService, DistanceService, StorageService],
 })
 export class AppModule {}

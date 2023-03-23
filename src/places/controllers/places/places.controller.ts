@@ -1,15 +1,22 @@
 import {
+  Body,
   Controller,
   Get,
   HttpStatus,
   Param,
+  ParseFilePipe,
   Post,
   Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import Response from 'src/global/models/response';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
+import { CreatePlaceDTO } from 'src/places/dto/CreatePlace.dto';
 import { PlaceEntityHelper } from 'src/places/helpers/PlaceHelper.dto';
+import { FileSizeValidationPipe } from 'src/places/pipes/file-size-validation/file-size-validation.pipe';
 import { PlacesService } from 'src/places/services/places/places.service';
 @Controller('places')
 export class PlacesController {
@@ -23,8 +30,15 @@ export class PlacesController {
    * All the actions that involve the action of reading
    */
   @Post('add')
-  async addNewPlace() {
-    // Handling adding a new place into the database
+  async addNewPlace(
+    @Body() body: CreatePlaceDTO,
+    @UploadedFiles() multimediaFiles: Array<Express.Multer.File>
+  ) {
+    const newPlace = await this.placesService.create(body, multimediaFiles)
+    return new Response({
+      content: newPlace,
+      status: HttpStatus.CREATED
+    })
   }
 
   /**

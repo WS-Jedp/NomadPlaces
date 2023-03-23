@@ -12,6 +12,13 @@ export default registerAs('config', () => {
         },
         keys: {
             googleMaps: process.env.GOOGLE_MAPS_API_KEY
+        },
+        GCP: {
+            projectID: process.env.GCP_PROJECT_ID,
+            clientEmail: process.env.GCP_PROJECT_ID,
+            privateKey: process.env.GCP_PRIVATE_KEY,
+            multimediaBucket: process.env.GCP_MULTIMEDIA_BUCKET,
+            jsonFileName: process.env.GCP_JSON_FILE,
         }
     }
 })

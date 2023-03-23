@@ -1,4 +1,4 @@
-import { PlaceTypes, Location, Commodities, PlaceRules } from '@prisma/client'
+import { PlaceTypes, Location, Commodities, PlaceRules, Multimedia } from '@prisma/client'
 import { IsArray, IsNotEmpty, IsObject, IsString,  } from 'class-validator'
 
 class CreatePlaceDTO {
@@ -10,7 +10,7 @@ class CreatePlaceDTO {
     readonly description?: string
 
     @IsArray()
-    readonly multimedia: String[]
+    readonly multimedia: Multimedia[]
 
     @IsArray()
     readonly type: PlaceTypes[]
