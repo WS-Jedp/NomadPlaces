@@ -1,6 +1,7 @@
-import { Multimedia, PlaceSessionActions, User } from '@prisma/client';
+import { PlaceSessionActions, User } from '@prisma/client';
 import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
+import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 
 class PlaceSessionCachedDataDTO {
   @IsString()
@@ -26,7 +27,7 @@ class PlaceSessionCachedDataDTO {
   lastActions: PlaceSessionActions[]
 
   @IsArray()
-  lastRecentlyActivities: Multimedia[]
+  lastRecentlyActivities: PlaceRecentActivity[]
 
   @IsArray()
   usersInSession: User[]

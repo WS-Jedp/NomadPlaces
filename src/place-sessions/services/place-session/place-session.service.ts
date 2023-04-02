@@ -7,7 +7,7 @@ import { RegisterPlaceSessionActionDTO } from 'src/place-sessions/dto/registerAc
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
 import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCachedData.dto';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
-import { UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
+import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 
 @Injectable()
 export class PlaceSessionService {
@@ -26,6 +26,8 @@ export class PlaceSessionService {
         const currentDate = new Date()
         const actionPayloadData = payload.actionPayload as PlaceSessionActionDataPayload[typeof payload.actionType]
 
+        const currentSession = await this.getSessionCacheData(payload.sessionID)
+
         const action = await this.placeSessionRepository.registerAction({
             createdDate: currentDate,
             dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
@@ -34,6 +36,13 @@ export class PlaceSessionService {
             userID: payload.userID,
             payload: actionPayloadData
         })
+
+        // Cache actions
+        this.addActionIntoSessionCache(currentSession.placeID, action)
+
+        if(payload.actionType == 'RECENT_ACTIVITY') {
+            this.addRecentActivityFromSessionCache(currentSession.placeID, action)
+        }
 
         return action
     }
@@ -47,13 +56,16 @@ export class PlaceSessionService {
 
         await this.placeSessionRepository.registerUserIntoSession(currentSession.id, userID)
 
-        await this.registerActionIntoSession({
+        const action = await this.registerActionIntoSession({
             createdDate: currentDate,
             dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
             placeSessionID: currentSession.id,
             type: 'JOIN',
             userID: userID,
         })
+
+        // Cache actions
+        this.addActionIntoSessionCache(placeID, action)
 
         return currentSession
     }
@@ -71,6 +83,9 @@ export class PlaceSessionService {
             type: 'LEAVE',
             userID: userID,
         })
+
+        const currentSession = await this.getSessionData(placeSessionID)
+        this.addActionIntoSessionCache(currentSession.placeID, currentAction)
 
         return currentAction
     }
@@ -176,24 +191,36 @@ export class PlaceSessionService {
     }
 
     // Place session recent activity methods
-    public async addRecentActivityFromSessionCache(placeID: string, recentActivity: Multimedia) {
+    public async addRecentActivityFromSessionCache(placeID: string, recentActivityAction: PlaceSessionActions & {
+        user: User;
+    }) {
         const cachedData = await this.getSessionCacheData(placeID)
         const MAX_LAST_RECENT_ACTIVITY_AMOUNT = 9
 
         if(cachedData.lastActions.length >= MAX_LAST_RECENT_ACTIVITY_AMOUNT) cachedData.lastRecentlyActivities.pop()
+        const actionPayloadData = recentActivityAction.payload as PlaceSessionActionDataPayload[typeof recentActivityAction.type]
 
+        const recentActivity: PlaceRecentActivity = {
+            userID: recentActivityAction.userID,
+            username: recentActivityAction.user.name,
+            userPhotoURL: recentActivityAction.user.name,
+            ...actionPayloadData.data as Multimedia
+        }
         cachedData.lastRecentlyActivities.unshift(recentActivity)
         await this.updateSessionCacheData(placeID, { lastRecentlyActivities: cachedData.lastRecentlyActivities })
         return cachedData.lastRecentlyActivities
     }
 
-    public async removeRecentActivityFromSessionCache(placeID: string, recentActivity: Multimedia) {
+    public async removeRecentActivityFromSessionCache(placeID: string, recentActivityAction: PlaceSessionActions & { user: User }) {
         const cachedData = await this.getSessionCacheData(placeID)
         const MAX_LAST_RECENT_ACTIVITY_AMOUNT = 9
 
         if(cachedData.lastActions.length >= MAX_LAST_RECENT_ACTIVITY_AMOUNT) cachedData.lastRecentlyActivities.pop()
 
-        cachedData.lastRecentlyActivities = cachedData.lastRecentlyActivities.filter(activity => activity.url !== recentActivity.url)
+        const actionPayloadData = recentActivityAction.payload as PlaceSessionActionDataPayload[typeof recentActivityAction.type]
+        const recentActivityPayload = actionPayloadData.data as Multimedia
+
+        cachedData.lastRecentlyActivities = cachedData.lastRecentlyActivities.filter(recentActivity => recentActivity.url !== recentActivityPayload.url)
         await this.updateSessionCacheData(placeID, { lastRecentlyActivities: cachedData.lastRecentlyActivities })
         return cachedData.lastRecentlyActivities
     }
