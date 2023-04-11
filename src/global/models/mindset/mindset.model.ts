@@ -5,4 +5,5 @@ export enum PLACE_MINDSET_ENUM {
     VIBE = "VIBE",
     COWORK = "COWORK",
     SOCIAL = "SOCIAL",
+    UNKNOWN = "UNKNOWN",
 }
