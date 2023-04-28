@@ -114,7 +114,6 @@ export class PlaceSessionService {
     public async getPlaceCurrentSession(placeID: string, currentDate: Date): Promise<PlaceSession> {
         const sessionEndDate = this.getSessionEndDate(currentDate)
         const session = await this.placeSessionRepository.findPlaceCurrentSession(placeID, currentDate, sessionEndDate)
-
         if(!session) return this.handleCreateDefaultNewSession(placeID, currentDate, sessionEndDate)
         return session
     }
@@ -125,6 +124,11 @@ export class PlaceSessionService {
      * --------- CACHE DATA METHODS
      ************************************************************
      */
+
+    public async deleteAllCacheData() {
+        await this.cacheManager.reset()
+    }
+
     public async getSessionCacheData(placeID: string): Promise<PlaceSessionCachedDataDTO> {
         const cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(`place-session-${placeID}`)
         return cachedData
