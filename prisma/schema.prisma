@@ -10,13 +10,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model People {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String?
+  birthdate DateTime?
+  about     String?
+  languages String[]
+  country   String?
+  job       String?
+  User      User?
+}
+
 model User {
   id                String                @id @default(auto()) @map("_id") @db.ObjectId
-  name              String
+  profilePicture    String?
+  username          String                @unique
+  email             String                @unique
+  password          String
+  person            People                @relation(fields: [personID], references: [id])
+  personID          String                @unique @db.ObjectId
+
+  // Sessions data
   sessions          PlaceSession[]        @relation(fields: [sessionsIDs], references: [id])
   sessionsIDs       String[]              @db.ObjectId
   sessionActions    PlaceSessionActions[]
-  sessionActionsIDs String                @db.ObjectId
+  sessionActionsIDs String[]                @db.ObjectId
+
+  // Util data
+  createdDate       DateTime
+
+  // // Auth data
+  // emailVerified     Boolean               @default(false)
+  // emailVerifiedDate DateTime?
 }
 
 model Places {

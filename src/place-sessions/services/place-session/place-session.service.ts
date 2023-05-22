@@ -202,8 +202,8 @@ export class PlaceSessionService {
 
         const recentActivity: PlaceRecentActivity = {
             userID: recentActivityAction.userID,
-            username: recentActivityAction.user.name,
-            userPhotoURL: recentActivityAction.user.name,
+            username: recentActivityAction.user.username,
+            userPhotoURL: recentActivityAction.user.profilePicture,
             ...actionPayloadData.data as Multimedia
         }
         cachedData.lastRecentlyActivities.unshift(recentActivity)

@@ -19,6 +19,9 @@ export default registerAs('config', () => {
             privateKey: process.env.GCP_PRIVATE_KEY,
             multimediaBucket: process.env.GCP_MULTIMEDIA_BUCKET,
             jsonFileName: process.env.GCP_JSON_FILE,
+        },
+        JWT: {
+            secret: process.env.JWT_SECRET
         }
     }
 })

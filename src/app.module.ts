@@ -11,7 +11,9 @@ import { PrismaService } from './global/prisma-service/prisma-service.service';
 import { DistanceService } from './global/distance/distance.service';
 import { PlaceSessionsModule } from './place-sessions/place-sessions.module';
 import { StorageService } from './global/services/gcp/storage/storage.service';
+import { AuthModule } from './auth/auth.module';
 import config from './config'
+import { JwtModule } from '@nestjs/jwt';
 
 const DEFAULT_ENV_FILE_PATH = '.env'
 
@@ -36,8 +38,10 @@ const DEFAULT_ENV_FILE_PATH = '.env'
       GCP_CLIENT_EMAIL: Joi.string().required(),
       GCP_MULTIMEDIA_BUCKET: Joi.string().required(),
       GCP_JSON_FILE: Joi.string().required(),
+      JWT_SECRET: Joi.string().required(),
     })
-  }), PlacesModule, PlaceSessionsModule],
+  }),
+  PlacesModule, PlaceSessionsModule, AuthModule],
   controllers: [AppController],
   providers: [AppService, PrismaService, DistanceService, StorageService],
 })
