@@ -8,6 +8,8 @@ import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-se
 import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCachedData.dto';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
+import { getCurrentDay, getCurrentMonth } from 'src/global/utils/dates';
+import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 
 @Injectable()
 export class PlaceSessionService {
@@ -21,12 +23,14 @@ export class PlaceSessionService {
      ************************************************************
      */
     public async registerUserActionIntoSession(payload: {
-        sessionID: string, userID: string, actionType: PLACE_SESSION_ACTIONS_ENUM, actionPayload: Object
+        sessionID: string, userID: string, actionType: PLACE_SESSION_ACTIONS_ENUM, actionPayload: Object, createdDateISO: string
     }) {
-        const currentDate = new Date()
+        const currentDate = new Date(payload.createdDateISO)
         const actionPayloadData = payload.actionPayload as PlaceSessionActionDataPayload[typeof payload.actionType]
 
         const currentSession = await this.getSessionCacheData(payload.sessionID)
+
+        if(!currentSession) await this.setSessionCacheData(payload.sessionID, await this.getSessionData(payload.sessionID))
 
         const action = await this.placeSessionRepository.registerAction({
             createdDate: currentDate,
@@ -48,24 +52,25 @@ export class PlaceSessionService {
     }
 
 
-    public async registerUserIntoSession(placeID: string, userID: string) {
-        const currentDate = new Date()
-        const currentSession = await this.getPlaceCurrentSession(placeID, currentDate)
+    public async registerUserIntoSession(placeID: string, userID: string, createdDateISO: string) {
+        const createdDate = new Date(createdDateISO)
+        const currentSession = await this.getPlaceCurrentSession(placeID, createdDate)
         const isUserInSession = currentSession.usersIDs.some(id => id === userID)
-        if(!isUserInSession) return false
+        if(isUserInSession) return currentSession
 
         await this.placeSessionRepository.registerUserIntoSession(currentSession.id, userID)
 
         const action = await this.registerActionIntoSession({
-            createdDate: currentDate,
-            dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
+            createdDate,
+            dayTimeSection: this.getDayTimeSection(createdDate.getHours()),
             placeSessionID: currentSession.id,
             type: 'JOIN',
             userID: userID,
+            payload: null
         })
 
         // Cache actions
-        this.addActionIntoSessionCache(placeID, action)
+        await this.addActionIntoSessionCache(placeID, action)
 
         return currentSession
     }
@@ -109,9 +114,7 @@ export class PlaceSessionService {
     public async getPlaceCurrentSession(placeID: string, currentDate: Date): Promise<PlaceSession> {
         const sessionEndDate = this.getSessionEndDate(currentDate)
         const session = await this.placeSessionRepository.findPlaceCurrentSession(placeID, currentDate, sessionEndDate)
-
         if(!session) return this.handleCreateDefaultNewSession(placeID, currentDate, sessionEndDate)
-
         return session
     }
 
@@ -121,7 +124,12 @@ export class PlaceSessionService {
      * --------- CACHE DATA METHODS
      ************************************************************
      */
-    public async getSessionCacheData(placeID: string) {
+
+    public async deleteAllCacheData() {
+        await this.cacheManager.reset()
+    }
+
+    public async getSessionCacheData(placeID: string): Promise<PlaceSessionCachedDataDTO> {
         const cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(`place-session-${placeID}`)
         return cachedData
     }
@@ -176,7 +184,9 @@ export class PlaceSessionService {
         const cachedData = await this.getSessionCacheData(placeID)
         const MAX_ACTIONS_AMOUNT = 21
 
-        if(cachedData.lastActions.length >= MAX_ACTIONS_AMOUNT) cachedData.lastActions.pop()
+        if(cachedData.lastActions)
+
+        if(cachedData.lastActions && cachedData.lastActions?.length >= MAX_ACTIONS_AMOUNT) cachedData.lastActions.pop()
 
         cachedData.lastActions.unshift(action)
         await this.updateSessionCacheData(placeID, { lastActions: cachedData.lastActions })
@@ -234,7 +244,8 @@ export class PlaceSessionService {
      */
     public async handleCreateDefaultNewSession(placeID: string, currentDate: Date, sessionEndDate: Date) {
         // Handle default creation of a session
-        const startDateOfSession = new Date(`${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDay()}:00:00:00`)
+        const COLOMBIA_ZERO_TIME = '.350Z'
+        const startDateOfSession = new Date(`${currentDate.getFullYear()}-${getCurrentMonth(currentDate)}-${getCurrentDay(currentDate)}T00:00:00${COLOMBIA_ZERO_TIME}`)
 
         const placeSessionDTO = new CreatePlaceSessionDTO({
             createDate: startDateOfSession,
@@ -243,6 +254,13 @@ export class PlaceSessionService {
         })
 
         const placeSessionEntity = await this.placeSessionRepository.create( PlaceSessionHelper.dtoToEntity(placeSessionDTO) )
+
+        this.setSessionCacheData(placeID, {
+            usersInSession: [],
+            lastActions: [],
+            lastRecentlyActivities: [],
+            lastUpdate: startDateOfSession,
+        })
         return placeSessionEntity
     }
 
@@ -261,12 +279,14 @@ export class PlaceSessionService {
     }
 
     protected getSessionEndDate(currentDate: Date) {
-        const END_HOUR_TIME_FOR_SESSION = '23:59:59'
-        const dayOfSession: number = currentDate.getDate()
-        const monthOfSession: number = currentDate.getMonth()
+        const COLOMBIA_ZERO_TIME = '.350Z'
+        const END_HOUR_TIME_FOR_SESSION = '23:59:59'+COLOMBIA_ZERO_TIME
+
+        const dayOfSession: string = getCurrentDay(currentDate)
+        const monthOfSession: string = getCurrentMonth(currentDate)
         const yearOfSession: number = currentDate.getFullYear()
 
-        return  new Date(`${yearOfSession}-${monthOfSession}-${dayOfSession}:${END_HOUR_TIME_FOR_SESSION}`)
-    } 
-
+        const newDate = `${yearOfSession}-${monthOfSession}-${dayOfSession}T${END_HOUR_TIME_FOR_SESSION}`
+        return new Date(newDate)
+    }
 }

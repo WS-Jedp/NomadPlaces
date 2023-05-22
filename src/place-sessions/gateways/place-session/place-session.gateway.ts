@@ -23,6 +23,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     console.log('SOMEONE IS CONNECTED!!');
   }
 
+
   @SubscribeMessage('quick-review-place-session')
   async handleUserQuickReview(
     client: Socket,
@@ -40,13 +41,16 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       placeID: string;
       userID: string;
       username: string;
+      currentDateISO: string;
     },
   ): Promise<void> {
     client.join(`place-session-${payload.placeID}`);
     const session = await this.placeSessionService.registerUserIntoSession(
       payload.placeID,
       payload.userID,
+      payload.currentDateISO
     );
+    
     this.server
       .to(`place-session-${payload.placeID}`)
       .emit(
@@ -82,6 +86,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       userID: string;
       type: PLACE_SESSION_ACTIONS_ENUM;
       data: PlaceSessionActionDataPayload;
+      createdDateISO: string;
     },
   ) {
     const lastAction = await this.placeSessionService.registerUserActionIntoSession({
@@ -89,6 +94,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       actionPayload: payload.data,
       sessionID: payload.sessionID,
       actionType: payload.type,
+      createdDateISO: payload.createdDateISO
     });
     this.server.to(`place-session-${payload.placeID}`).emit(`place-session-update`, JSON.stringify(lastAction))
   }

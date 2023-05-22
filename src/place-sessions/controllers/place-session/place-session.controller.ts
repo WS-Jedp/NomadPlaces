@@ -25,4 +25,13 @@ export class PlaceSessionController {
         })
     }
 
+    @Get('/reset-cache')
+    public async resetCache() {
+        await this.placeSessionService.deleteAllCacheData()
+        return new Response({
+            content: 'Cache reseted',
+            status: HttpStatus.OK
+        })
+    }
+
 }

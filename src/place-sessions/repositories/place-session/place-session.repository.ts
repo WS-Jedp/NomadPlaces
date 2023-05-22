@@ -131,12 +131,14 @@ export class PlaceSessionRepository {
       return this.prismaService.placeSession.findFirst({
         where: {
           place: {
-            id: placeID
+            id: placeID,
           },
           AND: {
             createdDate: {
-              gte: currentDate,
-              lte: sessionEndDate
+              lte: currentDate
+            },
+            endDate: {
+              gte: currentDate
             }
           }
         }
