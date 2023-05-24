@@ -1,4 +1,4 @@
-import { IsArray, IsDateString, IsMongoId, IsNotEmpty, IsObject, IsString,  } from 'class-validator'
+import { IsArray, IsDateString, IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 
 class PersonDTO {
 
@@ -11,21 +11,27 @@ class PersonDTO {
     readonly firstName: string
 
     @IsString()
+    @IsOptional()
     readonly lastName?: string
 
     @IsDateString()
-    readonly birthdate?: string
+    @IsOptional()
+    readonly birthdate?: Date
 
     @IsString()
+    @IsOptional()
     readonly about?: string
 
     @IsString()
+    @IsOptional()
     readonly country?: string
 
     @IsString()
+    @IsOptional()
     readonly job?: string
 
     @IsArray()
+    @IsOptional()
     readonly languages?: string[]
 
 }

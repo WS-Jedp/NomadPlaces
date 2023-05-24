@@ -10,10 +10,13 @@ export class UserRepository {
 
 
     // ID Methods
-    public async findOne(id: string) {
+    public async findOne(id: string, withPerson: boolean = false) {
         return await this.prismaService.user.findUnique({
             where: {
                 id,
+            },
+            include: {
+                person: withPerson,
             }
         });
     }

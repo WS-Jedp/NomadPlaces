@@ -15,3 +15,11 @@ export const getCurrentHours = (currentDate: Date):string => {
     if(currHours <= 9) return `0${currHours}`
     return String(currHours)
 }
+
+export const getColombianCurrentDate = (currDate?: Date) => {
+    const currentDate = currDate ? currDate : new Date()
+    const COLOMBIA_ZERO_TIME = '.350Z'
+    currDate.getTime()
+    const date = new Date(`${currentDate.getFullYear()}-${getCurrentMonth(currentDate)}-${getCurrentDay(currentDate)}T${currentDate.getHours()}:${currentDate.getMinutes()}:${currentDate.getSeconds()}${COLOMBIA_ZERO_TIME}`)
+    return date
+}

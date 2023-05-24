@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsObject, IsString,  } from 'class-validator'
+import { IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 import { PersonDTO } from '../person/person.dto'
 
 class UserDTO {
@@ -18,7 +18,8 @@ class UserDTO {
     @IsNotEmpty()
     readonly profilePicture: string
 
-   @IsObject()
+    @IsObject()
+    @IsOptional()
     readonly person?: Omit<PersonDTO, 'id'>
 
 }

@@ -1,12 +1,12 @@
-import { Body, Controller, Get, Post, Request, UseGuards } from '@nestjs/common';
-import { TokenPayloadDTO } from 'src/auth/dto/auth/tokenPayload.dto';
-import { CreatePersonDTO } from 'src/auth/dto/person/createPerson.dto';
-import { CreateUserDTO } from 'src/auth/dto/user/createUser.dto';
+import { Body, Controller, Get, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { RegisterUserDTO } from 'src/auth/dto/user/registerUser.dto';
 import { RequestUserDTO } from 'src/auth/dto/user/requestUser.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
 import { LocalAuthGuard } from 'src/auth/guards/local';
+import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { AuthService } from 'src/auth/services/auth/auth.service';
 import { UserService } from 'src/auth/services/user/user.service';
+import Response from 'src/global/models/response';
 
 @Controller('auth')
 export class AuthController {
@@ -19,18 +19,53 @@ export class AuthController {
     @UseGuards( LocalAuthGuard )
     @Post('login')
     async login(@Request() req) {
-        return this.authService.login(req.user as RequestUserDTO)
+        return new Response({
+            content: await this.authService.login(req.user as RequestUserDTO),
+            status: HttpStatus.OK,
+        })
     }
 
     @UseGuards( JwtAuthGuard )
     @Get('profile')
-    getProfile(@Request() req) {
-        return req.user as RequestUserDTO;
+    async getProfile(@Request() req) {
+        const userWithPerson = await this.userService.getUserWithPerson(req.user.id);
+        return new Response({
+            content: UserDTOHelper.fromEntityToDTO(userWithPerson, userWithPerson.person),
+            status: HttpStatus.OK,
+        })
     }
 
-    @Get('register')
-    async register(@Body() body: CreatePersonDTO & CreateUserDTO) {
-        const user = await this.userService.registerUser(body, body);
-        return this.authService.login({ id: user.id, username: user.username, email: user.email, personID: user.personID })
+    @Post('register')
+    async register(@Body() body: RegisterUserDTO) {
+        const user = await this.userService.registerUser(body.userData, body.personData);
+        const loginData = await this.authService.login(user);
+        return new Response({
+            content: loginData,
+            status: HttpStatus.CREATED,
+        })
+    }
+
+    @Get('profile/confirm')
+    async confirmProfile(@Body() body: { usernameOrEmail: string }) {
+        const user = await this.userService.findUserByEmailOrUsername(body.usernameOrEmail);
+        if (user) {
+            return new Response({
+                content: {
+                    byUsername: user.username ? true : false,
+                    byEmail: user.email ? true : false,
+                    exists: true,
+                },
+                status: HttpStatus.OK,
+                })
+        }
+
+        return new Response({
+            content: {
+                byUsername: null,
+                byEmail: null,
+                exists: false,
+            },
+            status: HttpStatus.NOT_FOUND,
+        });
     }
 }
