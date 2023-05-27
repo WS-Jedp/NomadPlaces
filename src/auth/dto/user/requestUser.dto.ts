@@ -17,6 +17,10 @@ class RequestUserDTO {
 
     @IsString()
     @IsNotEmpty()
+    readonly firstName: string
+
+    @IsString()
+    @IsNotEmpty()
     @IsMongoId()
     readonly personID: string
 

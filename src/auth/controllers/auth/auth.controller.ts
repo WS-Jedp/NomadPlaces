@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { RegisterUserDTO } from 'src/auth/dto/user/registerUser.dto';
 import { RequestUserDTO } from 'src/auth/dto/user/requestUser.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
@@ -37,8 +37,14 @@ export class AuthController {
 
     @Post('register')
     async register(@Body() body: RegisterUserDTO) {
-        const user = await this.userService.registerUser(body.userData, body.personData);
-        const loginData = await this.authService.login(user);
+        const registeredUser = await this.userService.registerUser(body.userData, body.personData);
+        const loginData = await this.authService.login({
+            id: registeredUser.user.id,
+            username: registeredUser.user.username,
+            email: registeredUser.user.email,
+            personID: registeredUser.person.id,
+            firstName: registeredUser.person.firstName
+        });
         return new Response({
             content: loginData,
             status: HttpStatus.CREATED,
@@ -46,13 +52,13 @@ export class AuthController {
     }
 
     @Get('profile/confirm')
-    async confirmProfile(@Body() body: { usernameOrEmail: string }) {
-        const user = await this.userService.findUserByEmailOrUsername(body.usernameOrEmail);
+    async confirmProfile(@Query('usernameOrEmail') usernameOrEmail: string ) {
+        const user = await this.userService.findUserByEmailOrUsername(usernameOrEmail);
         if (user) {
             return new Response({
                 content: {
-                    byUsername: user.username ? true : false,
-                    byEmail: user.email ? true : false,
+                    byUsername: user.username === usernameOrEmail ? true : false,
+                    byEmail: user.email === usernameOrEmail ? true : false,
                     exists: true,
                 },
                 status: HttpStatus.OK,

@@ -4,6 +4,7 @@ import { genSalt, hash } from 'bcrypt';
 import { CreatePersonDTO } from 'src/auth/dto/person/createPerson.dto';
 import { CreateUserDTO } from 'src/auth/dto/user/createUser.dto';
 import { UserDTO } from 'src/auth/dto/user/user.dto';
+import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { PeopleRepository } from 'src/auth/repositories/people';
 import { UserRepository } from 'src/auth/repositories/user';
 import { getColombianCurrentDate } from 'src/global/utils/dates';
@@ -64,7 +65,10 @@ export class UserService {
     };
 
     const user = await this.userRepository.registerUser(userToCreate);
-    return user;
+    return {
+      user: UserDTOHelper.fromEntityToDTO(user),
+      person,
+    };
   }
 
   public async findUserByEmailOrUsername(emailOrUsername: string) {
