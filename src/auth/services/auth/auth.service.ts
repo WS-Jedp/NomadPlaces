@@ -20,8 +20,9 @@ export class AuthService {
 
         const isPasswordValid = await compare(password, user.password)
         if (isPasswordValid) {
+            const person = await this.userService.getPerson(user.personID);
             const { password, ...rest } = user
-            return rest;
+            return {...rest, firstName: person.firstName};
         }
         return null;
     }
@@ -29,7 +30,7 @@ export class AuthService {
     // login method with JWT and passport
     public async login(user: RequestUserDTO) {
         // TODO: Add roles here when needed
-        const payload = { username: user.username, id: user.id, email: user.email, personID: user.personID };
+        const payload = { username: user.username, id: user.id, email: user.email, personID: user.personID, firstName: user.firstName };
         return {
             user: payload,
             access_token: this.jwtService.sign(payload),

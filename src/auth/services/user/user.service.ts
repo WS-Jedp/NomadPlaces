@@ -53,6 +53,8 @@ export class UserService {
     const salt = await genSalt()
     const hashedPassword = await hash(userData.password, salt)
 
+    const currentDate = getColombianCurrentDate(new Date())
+
     const userToCreate: Omit<User, 'id'> = {
       username: userData.username,
       email: userData.email,
@@ -61,7 +63,7 @@ export class UserService {
       personID: person.id,
       sessionActionsIDs: [],
       sessionsIDs: [],
-      createdDate: getColombianCurrentDate(new Date()),
+      createdDate: currentDate
     };
 
     const user = await this.userRepository.registerUser(userToCreate);
