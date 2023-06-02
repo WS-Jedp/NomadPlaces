@@ -24,16 +24,32 @@ export class PlaceSessionGateway implements OnGatewayConnection {
   }
 
 
+  /**
+   * =============================================
+   * ============== QUICK REVIEW =================
+   * =============================================
+   */
   @SubscribeMessage('quick-review-place-session')
   async handleUserQuickReview(
     client: Socket,
     payload: { placeID: string; userID: string },
   ) {
-    const totalListeners = this.server.listeners(
+    client.join(`place-session-${payload.placeID}-quick-review`);
+
+    const totalListeners = await this.server.listeners(
       `place-session-${payload.placeID}`,
     ).length;
+
+    this.server
+      .to(`place-session-${payload.placeID}-quick-review`)
+      .emit('quick-review-place-session', totalListeners);
   }
 
+  /**
+   * =============================================
+   * ============= JOIN AND LEAVE ================
+   * =============================================
+   */
   @SubscribeMessage('join-place-session')
   async handleUserJoinSession(
     client: Socket,
@@ -50,7 +66,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       payload.userID,
       payload.currentDateISO
     );
-    
+
     this.server
       .to(`place-session-${payload.placeID}`)
       .emit(
@@ -62,21 +78,26 @@ export class PlaceSessionGateway implements OnGatewayConnection {
   @SubscribeMessage('leave-place-session')
   async handleUserLeaveSession(
     client: Socket,
-    payload: { userID: string; sessionID: string; username: string },
+    payload: { userID: string; placeID: string; username: string, sesionID: string },
   ) {
-    client.leave(`place-session-${payload.sessionID}`);
+    client.leave(`place-session-${payload.placeID}`);
     await this.placeSessionService.unregisterUserFromSession(
-      payload.sessionID,
+      payload.sesionID,
       payload.userID,
     );
     this.server
-      .to(`place-session-${payload.sessionID}`)
+      .to(`place-session-${payload.placeID}`)
       .emit(
         'place-session-message',
         `The user @${payload.username} has leave the session`,
       );
   }
 
+  /**
+   * =============================================
+   * ============ SESSION ACTIONS ================
+   * =============================================
+   */
   @SubscribeMessage('place-session-action')
   async handleSessionNewUpdate(
     client: Socket,
