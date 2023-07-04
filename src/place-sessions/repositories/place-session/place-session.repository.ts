@@ -4,7 +4,7 @@ import {
   Injectable,
   NotImplementedException,
 } from '@nestjs/common';
-import { Multimedia, PlaceSession } from '@prisma/client';
+import { Multimedia, PlaceSession, PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { RegisterPlaceSessionActionDTO } from 'src/place-sessions/dto/registerAction.dto';
 
@@ -115,7 +115,8 @@ export class PlaceSessionRepository {
           payload: JSON.stringify(action.payload),
           type: action.type,
           placeSessionID: action.placeSessionID,
-          userID: action.userID
+          userID: action.userID,
+          username: action.username,
         },
     })
 
@@ -125,6 +126,63 @@ export class PlaceSessionRepository {
       user: true,
     } })
     return actionWithUser
+  }
+
+  // Find all actions from session
+  async findAllActions(sessionID: string) {
+    return this.prismaService.placeSession.findMany({
+      where: {
+        id: sessionID,
+      },
+      select: {
+        actions: true
+      }
+    })
+  }
+
+  async findAllLeaveActionsFromUser(sessionID: string, userID: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        id: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
+          userID: userID
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findLastLeaveActionFromUser(sessionID: string, userID: string) {
+    return this.prismaService.placeSessionActions.findFirst({
+      where: {
+        id: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
+          userID: userID,
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findLastJoinActionFromUser(sessionID: string, userID: string) {
+    return this.prismaService.placeSessionActions.findFirst({
+      where: {
+        id: sessionID,
+        AND: {
+          userID: userID,
+          type: PLACE_SESSION_ACTIONS_ENUM.JOIN,
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
   }
 
   async findPlaceCurrentSession(placeID: string, currentDate: Date, sessionEndDate: Date) {
@@ -138,9 +196,12 @@ export class PlaceSessionRepository {
               lte: currentDate
             },
             endDate: {
-              gte: currentDate
+              gte: sessionEndDate
             }
           }
+        },
+        include: {
+          actions: true,
         }
       })
   }

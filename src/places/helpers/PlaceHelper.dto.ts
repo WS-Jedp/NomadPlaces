@@ -7,11 +7,12 @@ class PlaceEntityHelper {
     public static MongoEntityToDTO(mongoEntity: PlaceMongoEntity): Places {
         return {
             id: mongoEntity._id.$oid,
-            commodities: mongoEntity.commodities,
+            name: mongoEntity.name,
+            knownFor: mongoEntity.knownFor,
             description: mongoEntity.description,
+            commodities: mongoEntity.commodities,
             location: mongoEntity.location,
             multimedia: mongoEntity.multimedia,
-            name: mongoEntity.name,
             rules: mongoEntity.rules,
             type: mongoEntity.type
         }

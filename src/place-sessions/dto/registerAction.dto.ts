@@ -3,7 +3,7 @@ import { IsDate, IsMongoId, IsNotEmpty, IsNotEmptyObject, IsObject, IsString,  }
 import { PlaceSessionActionDataPayload } from '../../global/models/placeSession/placeSessionActionData.model'
 
 
-type PlaceSesssionActionPayload = PlaceSessionActionDataPayload['MESSAGE'] | PlaceSessionActionDataPayload['UPDATE'] | PlaceSessionActionDataPayload['RECENT_ACTIVITY']
+type PlaceSesssionActionPayload = PlaceSessionActionDataPayload['MESSAGE'] | PlaceSessionActionDataPayload['UPDATE'] | PlaceSessionActionDataPayload['RECENT_ACTIVITY'] | PlaceSessionActionDataPayload['JOIN'] | PlaceSessionActionDataPayload['LEAVE']
 class RegisterPlaceSessionActionDTO {
     @IsDate()
     @IsNotEmpty()
@@ -26,6 +26,10 @@ class RegisterPlaceSessionActionDTO {
     @IsNotEmpty()
     @IsMongoId()
     readonly userID: string
+
+    @IsString()
+    @IsNotEmpty()
+    readonly username: string
 
     @IsString()
     @IsNotEmpty()

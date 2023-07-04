@@ -1,6 +1,6 @@
 import { Multimedia, PLACE_SESSION_ACTIONS_ENUM } from "@prisma/client";
 import { PLACE_MINDSET_ENUM } from "../mindset/mindset.model";
-import { UPDATE_ACTIONS } from "./updateAction.model";
+import { UpdateActionData, UPDATE_ACTIONS } from "./updateAction.model";
 
 export interface PlaceSessionActionDataPayload {
     [PLACE_SESSION_ACTIONS_ENUM.MESSAGE]: {
@@ -12,9 +12,17 @@ export interface PlaceSessionActionDataPayload {
     [PLACE_SESSION_ACTIONS_ENUM.UPDATE]: {
         data: {
             type: UPDATE_ACTIONS,
-            value: number | PLACE_MINDSET_ENUM
+            value: UpdateActionData
         },
     }
-    [PLACE_SESSION_ACTIONS_ENUM.LEAVE]: null
-    [PLACE_SESSION_ACTIONS_ENUM.JOIN]: null
+    [PLACE_SESSION_ACTIONS_ENUM.LEAVE]: {
+        data: {
+            username: string
+        }
+    }
+    [PLACE_SESSION_ACTIONS_ENUM.JOIN]: {
+        data: {
+            username: string
+        }
+    }
 }

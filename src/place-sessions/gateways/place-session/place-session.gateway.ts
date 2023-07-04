@@ -6,7 +6,9 @@ import {
 } from '@nestjs/websockets';
 import { PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
 import { Socket, Server } from 'socket.io';
+import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
+import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
 @WebSocketGateway(3080, {
@@ -61,36 +63,69 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     },
   ): Promise<void> {
     client.join(`place-session-${payload.placeID}`);
-    const session = await this.placeSessionService.registerUserIntoSession(
+    const { action, session } = await this.placeSessionService.registerUserIntoSession(
       payload.placeID,
       payload.userID,
+      payload.username,
       payload.currentDateISO
     );
+
+    const message = {
+      type: PLACE_SESSION_ACTIONS_ENUM.JOIN,
+      username: payload.username,
+      createdDateISO: payload.currentDateISO,
+      userID: payload.userID,
+      sessionID: session.id,
+      action,
+    }
 
     this.server
       .to(`place-session-${payload.placeID}`)
       .emit(
         'place-session-message',
-        `The user @${payload.username} is in the session`,
+        JSON.stringify(message),
       );
+  }
+
+  @SubscribeMessage('quick-join-place-session')
+  async handleQuickUserJoinSession(
+    client: Socket, 
+    payload: {
+      placeID: string;
+    }
+  ): Promise<void> {
+    // TODO: Validate if user is already in session or already leave the session
+    // If the user leaved the session, should not be able to quick join
+    client.join(`place-session-${payload.placeID}`);
   }
 
   @SubscribeMessage('leave-place-session')
   async handleUserLeaveSession(
     client: Socket,
-    payload: { userID: string; placeID: string; username: string, sesionID: string },
+    payload: { userID: string; placeID: string; username: string, sessionID: string },
   ) {
-    client.leave(`place-session-${payload.placeID}`);
-    await this.placeSessionService.unregisterUserFromSession(
-      payload.sesionID,
+    const action = await this.placeSessionService.unregisterUserFromSession(
+      payload.sessionID,
       payload.userID,
+      payload.username
     );
+
+    const message = {
+      type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
+      username: payload.username,
+      createdDateISO: new Date().toISOString(),
+      userID: payload.userID,
+      sessionID: payload.sessionID,
+      action,
+    }
+
     this.server
       .to(`place-session-${payload.placeID}`)
       .emit(
         'place-session-message',
-        `The user @${payload.username} has leave the session`,
+        JSON.stringify(message),
       );
+      client.leave(`place-session-${payload.placeID}`);
   }
 
   /**
@@ -105,6 +140,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       placeID: string,
       sessionID: string;
       userID: string;
+      username: string,
       type: PLACE_SESSION_ACTIONS_ENUM;
       data: PlaceSessionActionDataPayload;
       createdDateISO: string;
@@ -112,11 +148,42 @@ export class PlaceSessionGateway implements OnGatewayConnection {
   ) {
     const lastAction = await this.placeSessionService.registerUserActionIntoSession({
       userID: payload.userID,
+      username: payload.username,
       actionPayload: payload.data,
       sessionID: payload.sessionID,
       actionType: payload.type,
       createdDateISO: payload.createdDateISO
     });
-    this.server.to(`place-session-${payload.placeID}`).emit(`place-session-update`, JSON.stringify(lastAction))
+
+    this.server.to(`place-session-${payload.placeID}`)
+      .emit(`place-session-update`, JSON.stringify(lastAction))
   }
+  
+
+  @SubscribeMessage('place-session-multiple-actions')
+  async handleSessionMultipleActions(
+    client: Socket,
+    payload: {
+      placeID: string,
+      sessionID: string,
+      userID: string,
+      username: string,
+      actions: {
+        type: UPDATE_ACTIONS,
+        data: UpdateActionData
+      }[],
+      createdDateISO: string
+    }) {
+      const lastActions = await this.placeSessionService.regsiterMultipleActionsIntoSession({
+        userID: payload.userID,
+        username: payload.username,
+        actions: payload.actions,
+        sessionID: payload.sessionID,
+        createdDateISO: payload.createdDateISO,
+        placeID: payload.placeID
+      });
+
+      this.server.to(`place-session-${payload.placeID}`)
+      .emit(`place-session-update`, JSON.stringify(lastActions))
+    }
 }
