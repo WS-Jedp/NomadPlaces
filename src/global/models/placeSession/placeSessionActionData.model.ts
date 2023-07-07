@@ -1,5 +1,4 @@
 import { Multimedia, PLACE_SESSION_ACTIONS_ENUM } from "@prisma/client";
-import { PLACE_MINDSET_ENUM } from "../mindset/mindset.model";
 import { UpdateActionData, UPDATE_ACTIONS } from "./updateAction.model";
 
 export interface PlaceSessionActionDataPayload {

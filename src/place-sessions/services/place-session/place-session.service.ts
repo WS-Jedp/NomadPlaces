@@ -21,11 +21,13 @@ import {
   UpdateActionData,
   UPDATE_ACTIONS,
 } from 'src/global/models/placeSession/updateAction.model';
+import { UserRepository } from 'src/auth/repositories/user';
 
 @Injectable()
 export class PlaceSessionService {
   constructor(
     private placeSessionRepository: PlaceSessionRepository,
+    private userRepository: UserRepository,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -42,7 +44,7 @@ export class PlaceSessionService {
     actionPayload: Object;
     createdDateISO: string;
   }) {
-    const currentDate = new Date(payload.createdDateISO);
+    const currentDate = getColombianCurrentDate( new Date(payload.createdDateISO) );
     const actionPayloadData =
       payload.actionPayload as PlaceSessionActionDataPayload[typeof payload.actionType];
 
@@ -78,7 +80,7 @@ export class PlaceSessionService {
     username: string,
     createdDateISO: string,
   ): Promise<{ session: PlaceSession, action: PlaceSessionActions }> {
-    const createdDate = new Date(createdDateISO);
+    const createdDate = getColombianCurrentDate( new Date(createdDateISO) );
     const currentSession = await this.getPlaceCurrentSession(
       placeID,
       createdDate,
@@ -115,9 +117,11 @@ export class PlaceSessionService {
       userID,
     );
 
+    const currentDate = getColombianCurrentDate( createdDate );
+
     const action = await this.registerActionIntoSession({
-      createdDate,
-      dayTimeSection: this.getDayTimeSection(createdDate.getHours()),
+      createdDate: currentDate,
+      dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
       placeSessionID: currentSession.id,
       type: 'JOIN',
       userID: userID,
@@ -215,7 +219,7 @@ export class PlaceSessionService {
                         data,
                     },
                 },
-                createdDateISO: payload.createdDateISO,
+                createdDateISO: getColombianCurrentDate( new Date(payload.createdDateISO) ).toISOString(),
             });
             this.addActionIntoSessionCache(payload.placeID, lastAction);
             savedActions.push(lastAction)
@@ -270,10 +274,112 @@ export class PlaceSessionService {
     if(!cachedSession) {
       const colombianDate = getColombianCurrentDate()
       const session = await this.getPlaceCurrentSession(placeID, colombianDate);
-      const cachedData = await this.setSessionCacheData(placeID, session);
+      const cachedData = await this.setSessionCacheData(placeID, await this.getPlaceSessionData(session));
       return cachedData;
     }
     return cachedSession;
+  }
+
+  public async getPlaceSessionData(session: PlaceSession): Promise<PlaceSessionCachedDataDTO> {
+
+    const MAX_ACTIONS_PER_CACHED_SESSION = 21;
+    const actions = await this.placeSessionRepository.findAllActions(session.id);
+
+    const users = await this.userRepository.findAllUsersIDIn(session.usersIDs);
+    const allMindsetActions = this.getOnlyMindsetActions(actions);
+    const allSessionAmountofPeopleActions = this.getOnlyAmountOfPeopleActions(actions);
+    const allPlaceStatusActions = this.getOnlyPlaceStatusActions(actions)
+
+    return {
+      bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
+      lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
+      lastRecentlyActivities: [],
+      lastUpdate: actions.length > 0 ? actions[0].createdDate : null,
+      placeID: session.placeID,
+      usersInSession: this.getUsersInSession(users, actions.filter(action => action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN || action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE)),
+      amountOfPeople: this.getAmountOfPeoplePerAmount(allSessionAmountofPeopleActions),
+      placeStatus: this.getPlaceStatusPerStatus(allPlaceStatusActions), // TODO
+    }
+
+  }
+
+  private getOnlyMindsetActions(actions: PlaceSessionActions[]) {
+    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_MINDSET)
+  }
+
+  private getOnlyPlaceStatusActions(actions: PlaceSessionActions[]) {
+    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_STATUS)
+  }
+
+  private getOnlyAmountOfPeopleActions(actions: PlaceSessionActions[]) {
+    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE)
+  }
+
+
+  private getMindsetActionsPerMindset(actions: PlaceSessionActions[]) {
+    const AVAILABLE_MINDSETS = [
+      PLACE_MINDSET_ENUM.ROMANTIC,
+      PLACE_MINDSET_ENUM.WORK,
+      PLACE_MINDSET_ENUM.STUDY,
+      PLACE_MINDSET_ENUM.VIBE,
+    ]
+    const mindsetActionsPerMindset = AVAILABLE_MINDSETS.map(mindset => {
+      return {
+        mindset,
+        actions: actions.filter(action => this.getMindsetActionPerMindsetType(action) === mindset)
+      }
+    })
+
+    return mindsetActionsPerMindset
+  }
+
+  private getMindsetActionPerMindsetType(action: PlaceSessionActions): PLACE_MINDSET_ENUM {
+    const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_MINDSET']
+    return payload
+  }
+
+  private getUsersInSession(users: Partial<User>[], actions: PlaceSessionActions[]) {
+    const usersInSession = []
+    users.forEach(user => {
+      const lastUserJoinAction = actions.filter(action => action.userID === user.id && action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN).reduce((prev, next) => prev?.createdDate > next?.createdDate ? prev : next, undefined)
+      const lastUserLeaveAction = actions.filter(action => action.userID === user.id && action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE).reduce((prev, next) => prev?.createdDate > next?.createdDate ? prev : next, undefined)
+
+      if(!lastUserJoinAction) return
+      if(!lastUserLeaveAction || lastUserJoinAction.createdDate > lastUserLeaveAction.createdDate) {
+        usersInSession.push(user)
+      }
+    })
+    return usersInSession
+  }
+
+  private getAmountOfPeoplePerAmount(actions: PlaceSessionActions[]) {
+    const AMOUNT_OPTIONS = ['0-5', '5-10', '10-15', '15-20', '20-25', '+25']
+    const amountOfPeoplePerAmount = AMOUNT_OPTIONS.map(option => {
+      return {
+        amount: option,
+        actions: actions.filter(action => {
+          const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_AMOUNT_OF_PEOPLE']
+          return payload.amount === option
+        }),
+      }
+    })
+    return amountOfPeoplePerAmount
+  }
+
+  private getPlaceStatusPerStatus(actions: PlaceSessionActions[]) {
+    const PLACE_STATUS_OPTIONS = ['OPEN', 'CLOSED']
+    const placeStatusPerStatus = PLACE_STATUS_OPTIONS.map(option => {
+      return {
+        name: option,
+        type: option,
+        value: option === 'OPEN' ? true : false,
+        actions: actions.filter(action => {
+          const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_STATUS']
+          return payload.type === option
+        }),
+      }
+    })
+    return placeStatusPerStatus
   }
 
   /**
@@ -470,11 +576,11 @@ export class PlaceSessionService {
   ) {
     // Handle default creation of a session
     const COLOMBIA_ZERO_TIME = '.350Z';
-    const startDateOfSession = new Date(
+    const startDateOfSession = getColombianCurrentDate( new Date(
       `${currentDate.getFullYear()}-${getCurrentMonth(
         currentDate,
       )}-${getCurrentDay(currentDate)}T00:00:00${COLOMBIA_ZERO_TIME}`,
-    );
+    ) )
 
     const placeSessionDTO = new CreatePlaceSessionDTO({
       createDate: startDateOfSession,
@@ -525,6 +631,6 @@ export class PlaceSessionService {
     const yearOfSession: number = currentDate.getFullYear();
 
     const newDate = `${yearOfSession}-${monthOfSession}-${dayOfSession}T${END_HOUR_TIME_FOR_SESSION}`;
-    return new Date(newDate);
+    return getColombianCurrentDate(new Date(newDate));
   }
 }

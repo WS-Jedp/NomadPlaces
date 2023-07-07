@@ -156,7 +156,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     });
 
     this.server.to(`place-session-${payload.placeID}`)
-      .emit(`place-session-update`, JSON.stringify(lastAction))
+      .emit(`place-session-update`, JSON.stringify([lastAction]))
   }
   
 

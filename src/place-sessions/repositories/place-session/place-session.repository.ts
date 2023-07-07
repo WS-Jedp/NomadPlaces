@@ -5,6 +5,7 @@ import {
   NotImplementedException,
 } from '@nestjs/common';
 import { Multimedia, PlaceSession, PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
+import { UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { RegisterPlaceSessionActionDTO } from 'src/place-sessions/dto/registerAction.dto';
 
@@ -130,12 +131,107 @@ export class PlaceSessionRepository {
 
   // Find all actions from session
   async findAllActions(sessionID: string) {
-    return this.prismaService.placeSession.findMany({
+    return this.prismaService.placeSessionActions.findMany({
       where: {
-        id: sessionID,
+        placeSessionID: sessionID,
       },
-      select: {
-        actions: true
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findLastActions(sessionID: string, limit: number) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+      },
+      orderBy: {
+        createdDate: 'desc'
+      },
+      take: limit
+    })
+  }
+
+  async findAllMindsetActions(sessionID: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+          payload: {
+            equals: {
+              data: {
+                type: UPDATE_ACTIONS.PLACE_MINDSET
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findAllActionsPerMindset(sessionID: string, mindset: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+          payload: {
+            equals: {
+              data: {
+                type: UPDATE_ACTIONS.PLACE_MINDSET,
+                value: mindset
+              },
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findAllAmountPeopleActions(sessionID: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+          payload: {
+            equals: {
+              data: {
+                type: UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
+      }
+    })
+  }
+
+  async findAllPlaceStatusActions(sessionID: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+        AND: {
+          type: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+          payload: {
+            equals: {
+              type: UPDATE_ACTIONS.PLACE_STATUS
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdDate: 'desc'
       }
     })
   }
@@ -143,7 +239,7 @@ export class PlaceSessionRepository {
   async findAllLeaveActionsFromUser(sessionID: string, userID: string) {
     return this.prismaService.placeSessionActions.findMany({
       where: {
-        id: sessionID,
+        placeSessionID: sessionID,
         AND: {
           type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
           userID: userID
@@ -158,7 +254,7 @@ export class PlaceSessionRepository {
   async findLastLeaveActionFromUser(sessionID: string, userID: string) {
     return this.prismaService.placeSessionActions.findFirst({
       where: {
-        id: sessionID,
+        placeSessionID: sessionID,
         AND: {
           type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
           userID: userID,
@@ -173,7 +269,7 @@ export class PlaceSessionRepository {
   async findLastJoinActionFromUser(sessionID: string, userID: string) {
     return this.prismaService.placeSessionActions.findFirst({
       where: {
-        id: sessionID,
+        placeSessionID: sessionID,
         AND: {
           userID: userID,
           type: PLACE_SESSION_ACTIONS_ENUM.JOIN,

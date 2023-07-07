@@ -55,6 +55,22 @@ export class UserRepository {
         });
     }
 
+    public findAllUsersIDIn(ids: string[]) {
+        return this.prismaService.user.findMany({
+            where: {
+                id: {
+                    in: ids,
+                }
+            },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                profilePicture: true
+            }
+        });
+    }
+
     // Register user
     public async registerUser(data: Omit<User, 'id'>) {
         return await this.prismaService.user.create({

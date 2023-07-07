@@ -9,8 +9,15 @@ export enum UPDATE_ACTIONS {
 
 
 export interface UpdateActionData {
-    [UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE]: [number, number],
+    [UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE]: {
+        amount: string,
+        range: [number, number]
+    },
     [UPDATE_ACTIONS.PLACE_MINDSET]: PLACE_MINDSET_ENUM,
-    [UPDATE_ACTIONS.PLACE_STATUS]: any,
+    [UPDATE_ACTIONS.PLACE_STATUS]: {
+        value: boolean,
+        name: string
+        type: string
+    },
     [UPDATE_ACTIONS.PLACE_RECENT_ACTIVITY]: null,
   }

@@ -1,5 +1,5 @@
 import { PlaceSessionActions, User } from '@prisma/client';
-import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsString } from 'class-validator';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 
@@ -12,16 +12,26 @@ class PlaceSessionCachedDataDTO {
   @IsNotEmpty()
   lastUpdate: Date;
 
-  @IsNumber()
-  amountOfPeople: Number;
+  @IsArray()
+  amountOfPeople: {
+    amount: string,
+    actions: PlaceSessionActions[]
+  }[];
 
-  @IsString()
-  @IsNotEmpty()
-  bestMindsetTo: PLACE_MINDSET_ENUM;
+  @IsObject()
+  bestMindsetTo: {
+    mindset: PLACE_MINDSET_ENUM
+    actions: PlaceSessionActions[]
+  }[];
 
-  @IsString()
+  @IsArray()
   @IsNotEmpty()
-  placeStatus: string;
+  placeStatus: {
+        name: string,
+        type: string,
+        value: boolean,
+        actions: PlaceSessionActions[]
+    }[]
 
   @IsArray()
   lastActions: PlaceSessionActions[]
@@ -30,7 +40,7 @@ class PlaceSessionCachedDataDTO {
   lastRecentlyActivities: PlaceRecentActivity[]
 
   @IsArray()
-  usersInSession: User[]
+  usersInSession: {username: string, email: string, id: string, profilePicture: string}[]
   
   public constructor(properties: PlaceSessionCachedDataDTO) {
     this.placeID = properties.placeID
