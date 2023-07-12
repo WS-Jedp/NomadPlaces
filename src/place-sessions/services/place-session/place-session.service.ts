@@ -1,4 +1,4 @@
-import { Injectable, CACHE_MANAGER, Inject } from '@nestjs/common';
+import { Injectable, CACHE_MANAGER, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import {
   DAY_TIME_SECTION_ENUM,
@@ -80,11 +80,12 @@ export class PlaceSessionService {
     username: string,
     createdDateISO: string,
   ): Promise<{ session: PlaceSession, action: PlaceSessionActions }> {
-    const createdDate = getColombianCurrentDate( new Date(createdDateISO) );
+    const createdDate = getColombianCurrentDate();
     const currentSession = await this.getPlaceCurrentSession(
       placeID,
       createdDate,
     );
+    // const cachedSession = await this.getPlaceCurrentCachedSesssion(placeID)
 
     const userIDOpt = currentSession.usersIDs.find((id) => id === userID);
     if (userIDOpt) {
@@ -117,7 +118,7 @@ export class PlaceSessionService {
       userID,
     );
 
-    const currentDate = getColombianCurrentDate( createdDate );
+    const currentDate = getColombianCurrentDate();
 
     const action = await this.registerActionIntoSession({
       createdDate: currentDate,
@@ -142,24 +143,50 @@ export class PlaceSessionService {
   public async unregisterUserFromSession(
     placeSessionID: string,
     userID: string,
-    username: string
+    username: string,
+    placeID: string
   ) {
-    const isUserInSession = await this.placeSessionRepository.findUserInSession(
-      placeSessionID,
-      userID,
-    );
-    if (!isUserInSession) return null;
+    const cachedSession = await this.getPlaceCurrentCachedSesssion(placeID);
+    if(cachedSession && !cachedSession.usersInSession.find((user) => user.id === userID)) {
+      new HttpException("User is not in session", HttpStatus.BAD_REQUEST)
+    }
 
     const lastLeaveAction =  await this.placeSessionRepository.findLastLeaveActionFromUser(placeSessionID, userID)
     const lastJoinAction =  await this.placeSessionRepository.findLastJoinActionFromUser(placeSessionID, userID)
     const currentDate = getColombianCurrentDate();
 
+    if(!lastLeaveAction) {
+      const currentAction = await this.registerActionIntoSession({
+        createdDate: currentDate,
+        dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
+        placeSessionID: placeSessionID,
+        type: 'LEAVE',
+        userID: userID,
+        username: username,
+        payload: {
+          data: {
+            username,
+          }
+        },
+      });
+
+      const currentSession = await this.getSessionData(placeSessionID);
+      this.addActionIntoSessionCache(currentSession.placeID, currentAction);
+
+      return currentAction;
+    }
+
+
     if (
         lastLeaveAction &&
         lastJoinAction.createdDate > lastLeaveAction.createdDate &&
-        currentDate < lastLeaveAction.createdDate
+        currentDate > lastJoinAction.createdDate
       ) {
         // TODO: Here should be the Redis function to remove the user from the session
+        if(cachedSession) {
+          this.removeUserFromSessionCache(placeID, userID)
+        }
+
         const currentAction = await this.registerActionIntoSession({
           createdDate: currentDate,
           dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
@@ -173,10 +200,8 @@ export class PlaceSessionService {
             }
           },
         });
-    
         const currentSession = await this.getSessionData(placeSessionID);
         this.addActionIntoSessionCache(currentSession.placeID, currentAction);
-    
         return currentAction;
     }
 
@@ -274,13 +299,13 @@ export class PlaceSessionService {
     if(!cachedSession) {
       const colombianDate = getColombianCurrentDate()
       const session = await this.getPlaceCurrentSession(placeID, colombianDate);
-      const cachedData = await this.setSessionCacheData(placeID, await this.getPlaceSessionData(session));
+      const cachedData = await this.setSessionCacheData(placeID, await this.getPlaceSessionCachedData(session));
       return cachedData;
     }
     return cachedSession;
   }
 
-  public async getPlaceSessionData(session: PlaceSession): Promise<PlaceSessionCachedDataDTO> {
+  public async getPlaceSessionCachedData(session: PlaceSession): Promise<PlaceSessionCachedDataDTO> {
 
     const MAX_ACTIONS_PER_CACHED_SESSION = 21;
     const actions = await this.placeSessionRepository.findAllActions(session.id);
@@ -294,7 +319,7 @@ export class PlaceSessionService {
       bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
       lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
       lastRecentlyActivities: [],
-      lastUpdate: actions.length > 0 ? actions[0].createdDate : null,
+      lastUpdate: actions.length > 0 ? actions.filter(action => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE)[0]?.createdDate : null,
       placeID: session.placeID,
       usersInSession: this.getUsersInSession(users, actions.filter(action => action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN || action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE)),
       amountOfPeople: this.getAmountOfPeoplePerAmount(allSessionAmountofPeopleActions),
@@ -395,9 +420,14 @@ export class PlaceSessionService {
   public async getSessionCacheData(
     placeID: string,
   ): Promise<PlaceSessionCachedDataDTO> {
-    const cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
+    let cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
       `place-session-${placeID}`,
     );
+    if(!cachedData) {
+      const colombianDate = getColombianCurrentDate()
+      const session = await this.getPlaceCurrentSession(placeID, colombianDate);
+      cachedData = await this.getPlaceSessionCachedData(session)
+    }
     return cachedData;
   }
 
@@ -446,14 +476,14 @@ export class PlaceSessionService {
     return cachedData.usersInSession;
   }
 
-  public async removeUserFromSessionCache(placeID: string, user: User) {
+  public async removeUserFromSessionCache(placeID: string, userID: string) {
     const cachedData = await this.getSessionCacheData(placeID);
     const users = cachedData.usersInSession;
 
-    if (users.some((u) => u.id !== user.id)) return cachedData.usersInSession;
+    if (users.some((u) => u.id !== userID)) return cachedData.usersInSession;
 
     cachedData.usersInSession = cachedData.usersInSession.filter(
-      (u) => u.id !== user.id,
+      (u) => u.id !== userID,
     );
     await this.updateSessionCacheData(placeID, {
       usersInSession: cachedData.usersInSession,

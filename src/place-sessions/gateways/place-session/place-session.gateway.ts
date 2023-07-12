@@ -9,6 +9,7 @@ import { Socket, Server } from 'socket.io';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
+import { getColombianCurrentDate } from 'src/global/utils/dates';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
 @WebSocketGateway(3080, {
@@ -67,13 +68,13 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       payload.placeID,
       payload.userID,
       payload.username,
-      payload.currentDateISO
+      getColombianCurrentDate().toISOString()
     );
 
     const message = {
       type: PLACE_SESSION_ACTIONS_ENUM.JOIN,
       username: payload.username,
-      createdDateISO: payload.currentDateISO,
+      createdDateISO: action.createdDate,
       userID: payload.userID,
       sessionID: session.id,
       action,
@@ -107,13 +108,14 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     const action = await this.placeSessionService.unregisterUserFromSession(
       payload.sessionID,
       payload.userID,
-      payload.username
+      payload.username,
+      payload.placeID
     );
 
     const message = {
       type: PLACE_SESSION_ACTIONS_ENUM.LEAVE,
       username: payload.username,
-      createdDateISO: new Date().toISOString(),
+      createdDateISO: action.createdDate,
       userID: payload.userID,
       sessionID: payload.sessionID,
       action,
@@ -152,7 +154,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       actionPayload: payload.data,
       sessionID: payload.sessionID,
       actionType: payload.type,
-      createdDateISO: payload.createdDateISO
+      createdDateISO: getColombianCurrentDate().toISOString(),
     });
 
     this.server.to(`place-session-${payload.placeID}`)

@@ -136,7 +136,7 @@ export class PlaceSessionRepository {
         placeSessionID: sessionID,
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
@@ -147,7 +147,7 @@ export class PlaceSessionRepository {
         placeSessionID: sessionID,
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       },
       take: limit
     })
@@ -169,7 +169,7 @@ export class PlaceSessionRepository {
         }
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
@@ -191,7 +191,7 @@ export class PlaceSessionRepository {
         }
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
@@ -212,7 +212,7 @@ export class PlaceSessionRepository {
         }
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
@@ -231,7 +231,7 @@ export class PlaceSessionRepository {
         }
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
@@ -246,7 +246,7 @@ export class PlaceSessionRepository {
         }
       },
       orderBy: {
-        createdDate: 'desc'
+        createdDate: 'asc'
       }
     })
   }
