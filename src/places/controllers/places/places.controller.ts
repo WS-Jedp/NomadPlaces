@@ -32,13 +32,13 @@ export class PlacesController {
   @Post('add')
   async addNewPlace(
     @Body() body: CreatePlaceDTO,
-    @UploadedFiles() multimediaFiles: Array<Express.Multer.File>
+    @UploadedFiles() multimediaFiles: Array<Express.Multer.File>,
   ) {
-    const newPlace = await this.placesService.create(body, multimediaFiles)
+    const newPlace = await this.placesService.create(body, multimediaFiles);
     return new Response({
       content: newPlace,
-      status: HttpStatus.CREATED
-    })
+      status: HttpStatus.CREATED,
+    });
   }
 
   /**
@@ -71,7 +71,9 @@ export class PlacesController {
     ).places;
     const placesWithQuickSessionData = await Promise.all(
       places.map(async (place) => {
-        const sessionData = await this.placeSessionService.getSessionCacheData( place.id )
+        const sessionData = await this.placeSessionService.getSessionCacheData(
+          place.id,
+        );
         return {
           place,
           quickSessionData: sessionData ? sessionData : null,
@@ -104,6 +106,29 @@ export class PlacesController {
   async getAll() {
     return new Response({
       content: await this.placesService.getAll(),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Get('all')
+  async getAllWithCachedSession() {
+    const places = await (await this.placesService.getAll()).places;
+    const placesWithQuickSessionData = await Promise.all(
+      places.map(async (place) => {
+        const sessionData = await this.placeSessionService.getSessionCacheData(
+          place.id,
+        );
+        return {
+          place,
+          quickSessionData: sessionData ? sessionData : null,
+        };
+      }),
+    );
+
+    return new Response({
+      content: {
+        placesWithQuickSessionData
+      },
       status: HttpStatus.OK,
     });
   }
