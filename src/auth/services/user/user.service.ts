@@ -1,9 +1,9 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { genSalt, hash } from 'bcrypt';
+import { genSalt, hash, compare } from 'bcrypt';
+import { randomBytes } from 'crypto'
 import { CreatePersonDTO } from 'src/auth/dto/person/createPerson.dto';
 import { CreateUserDTO } from 'src/auth/dto/user/createUser.dto';
-import { UserDTO } from 'src/auth/dto/user/user.dto';
 import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { PeopleRepository } from 'src/auth/repositories/people';
 import { UserRepository } from 'src/auth/repositories/user';
@@ -63,7 +63,9 @@ export class UserService {
       personID: person.id,
       sessionActionsIDs: [],
       sessionsIDs: [],
-      createdDate: currentDate
+      createdDate: currentDate,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiry: null
     };
 
     const user = await this.userRepository.registerUser(userToCreate);
@@ -80,4 +82,56 @@ export class UserService {
 
     return user;
   }
+
+
+  // Generate reset password link
+  public async generateResetPasswordLink(user: User) {
+    if (!user) {
+      throw new HttpException('User not found', 404)
+    }
+
+    const tokenExpiration = new Date();
+
+    if(user && user.resetPasswordToken &&  tokenExpiration <= user.resetPasswordTokenExpiry ) {
+      throw new HttpException('User already has a valid token to reset the password', 409)
+    }
+
+    const token = randomBytes(20).toString('hex');
+    const hashedToken = await hash(token, 10);
+    tokenExpiration.setHours(tokenExpiration.getHours() + 1);
+
+    await this.userRepository.updateResetPasswordToken(user, hashedToken, tokenExpiration)
+
+    const FRONTNED_URL = process.env.FRONTEND_URL
+    return `${FRONTNED_URL}/home?recover_password=${token}?email=${user.email}`;
+  }
+
+  // Reset password (Change the password)
+  public async resetPassword(user: User, token: string, newPassword: string) {
+    if (!user) {
+      throw new HttpException('User not found', 404)
+    }
+
+    if(user && !user.resetPasswordToken) {
+      throw new HttpException('User does not have a valid token to reset the password', 409)
+    }
+
+    if(new Date() <= user.resetPasswordTokenExpiry ) {
+      throw new HttpException('User already has a valid token to reset the password', 409)
+    }
+
+    const isValidToken = await compare(token, user.resetPasswordToken);
+
+    if (!isValidToken) {
+      throw new HttpException('Invalid token', 400)
+    }
+
+    const salt = await genSalt()
+    const hashedPassword = await hash(newPassword, salt)
+
+    await this.userRepository.updatePassword(user, hashedPassword)
+
+    return user;
+  }
+
 }

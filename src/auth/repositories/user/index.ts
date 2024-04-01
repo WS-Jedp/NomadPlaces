@@ -77,4 +77,30 @@ export class UserRepository {
             data,
         });
     }
+
+    // Update reset password token
+    public async updateResetPasswordToken(user: User, token: string, expireDate: Date) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                resetPasswordToken: token,
+                resetPasswordTokenExpiry: expireDate
+            }
+        });
+    }
+
+    public async updatePassword(user: User, password: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                password,
+                resetPasswordToken: null,
+                resetPasswordTokenExpiry: null
+            }
+        });
+    }
 }

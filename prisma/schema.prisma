@@ -11,7 +11,7 @@ datasource db {
 }
 
 model People {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
   firstName String
   lastName  String?
   birthdate DateTime?
@@ -23,24 +23,26 @@ model People {
 }
 
 model User {
-  id                String                @id @default(auto()) @map("_id") @db.ObjectId
-  profilePicture    String?
-  username          String                @unique
-  email             String                @unique
-  password          String
-  person            People                @relation(fields: [personID], references: [id])
-  personID          String                @unique @db.ObjectId
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  profilePicture String?
+  username       String  @unique
+  email          String  @unique
+  password       String
+  person         People  @relation(fields: [personID], references: [id])
+  personID       String  @unique @db.ObjectId
 
   // Sessions data
   sessions          PlaceSession[]        @relation(fields: [sessionsIDs], references: [id])
   sessionsIDs       String[]              @db.ObjectId
   sessionActions    PlaceSessionActions[]
-  sessionActionsIDs String[]                @db.ObjectId
+  sessionActionsIDs String[]              @db.ObjectId
 
   // Util data
-  createdDate       DateTime
+  createdDate DateTime
 
-  // // Auth data
+  // Auth data
+  resetPasswordToken       String?
+  resetPasswordTokenExpiry DateTime?
   // emailVerified     Boolean               @default(false)
   // emailVerifiedDate DateTime?
 }
@@ -121,7 +123,7 @@ model PlaceSessionActions {
   placeSession   PlaceSession               @relation(fields: [placeSessionID], references: [id])
   placeSessionID String                     @db.ObjectId
   user           User                       @relation(fields: [userID], references: [id])
-  userID         String                   @db.ObjectId
+  userID         String                     @db.ObjectId
   username       String
 }
 

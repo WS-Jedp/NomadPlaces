@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNotEmptyObject, IsObject, IsString } from "class-validator";
+import { IsNotEmpty, IsNotEmptyObject, IsObject, IsOptional, IsString } from "class-validator";
 import { CreatePersonDTO } from "../person/createPerson.dto";
 import { CreateUserDTO } from "./createUser.dto";
 
@@ -12,4 +12,7 @@ export class RegisterUserDTO {
     @IsNotEmpty()
     @IsNotEmptyObject()
     readonly personData: CreatePersonDTO
+
+    @IsOptional()
+    readonly language: 'es' | 'en' = 'es'
 }
