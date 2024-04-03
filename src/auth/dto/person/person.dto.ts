@@ -1,3 +1,4 @@
+import { PERSON_INDUSTRY } from '@prisma/client'
 import { IsArray, IsDateString, IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 
 class PersonDTO {
@@ -27,8 +28,9 @@ class PersonDTO {
     readonly country?: string
 
     @IsString()
+    @IsArray()
     @IsOptional()
-    readonly job?: string
+    readonly industry?: PERSON_INDUSTRY[]
 
     @IsArray()
     @IsOptional()

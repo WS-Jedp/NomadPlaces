@@ -10,7 +10,7 @@ class PersonDTOHelper {
             birthdate: personDTO.birthdate ? new Date(personDTO.birthdate) : null,
             about: personDTO.about || null,
             country: personDTO.country || null,
-            job: personDTO.job || null,
+            industry: personDTO.industry || [],
             languages: personDTO.languages || [],
         }
     }
@@ -23,7 +23,7 @@ class PersonDTOHelper {
             birthdate: personEntity.birthdate || null,
             about: personEntity.about || null,
             country: personEntity.country || null,
-            job: personEntity.job || null,
+            industry: personEntity.industry || [],
             languages: personEntity.languages || null,
         }
     }

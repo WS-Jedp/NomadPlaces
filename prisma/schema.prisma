@@ -10,15 +10,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PERSON_INDUSTRY {
+  STUDENT
+  WORKER
+  ENTREPRENEUR
+  FREELANCER
+  ARTIST
+  PROGRAMMER
+  DESIGNER
+  MARKETER
+  ADMINISTRATOR
+  WRITER
+  OTHER
+}
+
 model People {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
   firstName String
   lastName  String?
   birthdate DateTime?
   about     String?
   languages String[]
   country   String?
-  job       String?
+  industry  PERSON_INDUSTRY[]
   User      User?
 }
 

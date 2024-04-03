@@ -31,7 +31,6 @@ export class UserService {
   }
 
   // User
-
   public async getUserWithPerson(id: string) {
     const user = await this.userRepository.findOne(id, true);
     return user;
