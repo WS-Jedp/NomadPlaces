@@ -1,7 +1,9 @@
 import { Body, Controller, Get, HttpStatus, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { RecoverPasswordDTO } from 'src/auth/dto/auth/resetPassword.dto';
+import { UpdatePersonDTO } from 'src/auth/dto/person/updatePerson.dto';
 import { RegisterUserDTO } from 'src/auth/dto/user/registerUser.dto';
 import { RequestUserDTO } from 'src/auth/dto/user/requestUser.dto';
+import { UpdateUserDTO } from 'src/auth/dto/user/updateUser.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
 import { LocalAuthGuard } from 'src/auth/guards/local';
 import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
@@ -56,6 +58,19 @@ export class AuthController {
         return new Response({
             content: loginData,
             status: HttpStatus.CREATED,
+        })
+    }
+
+    @Post('profile/update')
+    async updateProfile(@Request() req, @Body() body: { userData: UpdateUserDTO, personData: UpdatePersonDTO }) {
+        const updated = await this.userService.updateUser(body.userData, body.personData);
+
+        return new Response({
+            content: {
+                message: 'Profile updated successfully',
+                data: updated,
+            },
+            status: HttpStatus.OK,
         })
     }
 

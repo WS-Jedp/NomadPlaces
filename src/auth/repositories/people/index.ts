@@ -24,4 +24,13 @@ export class PeopleRepository {
             data,
         });
     }
+
+    public async updatePerson(id: string, data: Partial<People>) {
+        return await this.prismaService.people.update({
+            where: {
+                id,
+            },
+            data,
+        });
+    }
 }

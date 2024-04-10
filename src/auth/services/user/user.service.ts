@@ -3,7 +3,11 @@ import { User } from '@prisma/client';
 import { genSalt, hash, compare } from 'bcrypt';
 import { randomBytes } from 'crypto'
 import { CreatePersonDTO } from 'src/auth/dto/person/createPerson.dto';
+import { PersonDTO } from 'src/auth/dto/person/person.dto';
+import { UpdatePersonDTO } from 'src/auth/dto/person/updatePerson.dto';
 import { CreateUserDTO } from 'src/auth/dto/user/createUser.dto';
+import { UpdateUserDTO } from 'src/auth/dto/user/updateUser.dto';
+import { UserDTO } from 'src/auth/dto/user/user.dto';
 import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { PeopleRepository } from 'src/auth/repositories/people';
 import { UserRepository } from 'src/auth/repositories/user';
@@ -80,6 +84,32 @@ export class UserService {
     );
 
     return user;
+  }
+
+  public async updateUser(updateUserDTO: UpdateUserDTO, updatePersonDTO: UpdatePersonDTO) {
+    const user = await this.userRepository.findOne(updateUserDTO.userID);
+
+    if (!user) {
+      throw new HttpException('User not found', 404)
+    }
+
+    const person = await this.peopleRepository.findOne(updatePersonDTO.id);
+
+    if (!person) {
+      throw new HttpException('Person not found', 404)
+    }
+
+    // Handle correctly the profile picture
+    if(updateUserDTO.profilePicture) {
+      // Upload profile picture
+    }
+
+    const { id, ...personData } = updatePersonDTO;
+    const personUpdated = await this.peopleRepository.updatePerson(person.id, personData);
+    return {
+      user: UserDTOHelper.fromEntityToDTO(user),
+      person: PersonDTOHelper.fromEntityToDTO(personUpdated),
+    };
   }
 
 
