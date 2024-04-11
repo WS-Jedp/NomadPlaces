@@ -103,4 +103,56 @@ export class UserRepository {
             }
         });
     }
+
+    public async addFollower(user: User, followerID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                followers: {
+                    push: followerID,
+                }
+            }
+        });
+    }
+
+    public async removeFollower(user: User, followerID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                followers: {
+                    set: user.followers.filter(follower => follower !== followerID)
+                }
+            }
+        });
+    }
+
+    public async addFollowing(user: User, followingID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                following: {
+                    push: followingID,
+                }
+            }
+        });
+    }
+
+    public async removeFollowing(user: User, followingID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                following: {
+                    set: user.following.filter(following => following !== followingID)
+                }
+            }
+        });
+    }
 }

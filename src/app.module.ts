@@ -14,6 +14,7 @@ import { DistanceService } from './global/distance/distance.service';
 import { PlaceSessionsModule } from './place-sessions/place-sessions.module';
 import { StorageService } from './global/services/gcp/storage/storage.service';
 import { AuthModule } from './auth/auth.module';
+import { SocialModule } from './social/social.module';
 import config from './config';
 
 const DEFAULT_ENV_FILE_PATH = '.env';
@@ -71,6 +72,7 @@ const DEFAULT_ENV_FILE_PATH = '.env';
     PlacesModule,
     PlaceSessionsModule,
     AuthModule,
+    SocialModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, DistanceService, StorageService],

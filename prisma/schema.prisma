@@ -51,14 +51,35 @@ model User {
   sessionActions    PlaceSessionActions[]
   sessionActionsIDs String[]              @db.ObjectId
 
-  // Util data
-  createdDate DateTime
+  followers         String[] @db.ObjectId
+  following         String[] @db.ObjectId
+  sentFollowRequests   UserFollowRequest[]   @relation("UserFollowRequestSender")
+  receivedFollowRequests UserFollowRequest[] @relation("UserFollowRequestReceiver")
+
 
   // Auth data
   resetPasswordToken       String?
   resetPasswordTokenExpiry DateTime?
   // emailVerified     Boolean               @default(false)
   // emailVerifiedDate DateTime?
+
+  // Util data
+  createdDate DateTime
+}
+
+enum FOLLOW_REQUEST_STATUS_ENUM {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model UserFollowRequest {
+  id         String                  @id @default(auto()) @map("_id") @db.ObjectId
+  sender     User                    @relation(name: "UserFollowRequestSender", fields: [senderID], references: [id])
+  senderID   String                  @db.ObjectId
+  receiver   User                    @relation(name: "UserFollowRequestReceiver", fields: [receiverID], references: [id])
+  receiverID String                  @db.ObjectId
+  status     FOLLOW_REQUEST_STATUS_ENUM
 }
 
 model Places {

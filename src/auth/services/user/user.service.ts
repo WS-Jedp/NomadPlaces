@@ -68,7 +68,9 @@ export class UserService {
       sessionsIDs: [],
       createdDate: currentDate,
       resetPasswordToken: null,
-      resetPasswordTokenExpiry: null
+      resetPasswordTokenExpiry: null,
+      followers: [],
+      following: []
     };
 
     const user = await this.userRepository.registerUser(userToCreate);
@@ -163,4 +165,61 @@ export class UserService {
     return user;
   }
 
+    // =================
+    // User social methods
+    async getFollowers(userID: string) {
+      const user = await this.userRepository.findOne(userID);
+      if (!user) {
+          throw new HttpException('User not found', 404);
+      }
+
+      if(user.followers.length === 0) return [];
+
+      const followers = await this.userRepository.findAllUsersIDIn(user.followers);
+      return followers;
+  }
+
+  async getFollowing(userID: string) {
+      const user = await this.userRepository.findOne(userID);
+      if (!user) {
+          throw new HttpException('User not found', 404);
+      }
+
+      if(user.following.length === 0) return [];
+
+      const following = await this.userRepository.findAllUsersIDIn(user.following);
+      return following;
+  }
+
+  async removeFollower(userID: string, followerID: string) {
+      const user = await this.userRepository.findOne(userID);
+      if (!user) {
+          throw new HttpException('User not found', 404);
+      }
+
+      const follower = await this.userRepository.findOne(followerID);
+      if (!follower) {
+          throw new HttpException('Follower not found', 404);
+      }
+
+      const updatedUser = await this.userRepository.removeFollower(user, followerID);
+      await this.userRepository.removeFollowing(follower, userID);
+      return updatedUser.followers;
+  }
+
+  async removeFollowing(userID: string, followingID: string) {
+      const user = await this.userRepository.findOne(userID);
+      if (!user) {
+          throw new HttpException('User not found', 404);
+      }
+
+      const following = await this.userRepository.findOne(followingID);
+      if (!following) {
+          throw new HttpException('Following not found', 404);
+      }
+
+      const updatedUser = await this.userRepository.removeFollowing(user, followingID);
+      await this.userRepository.removeFollower(following, userID);
+      return updatedUser.following;
+  }
 }
