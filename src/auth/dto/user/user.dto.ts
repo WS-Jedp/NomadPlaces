@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
+import { IsArray, IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 import { PersonDTO } from '../person/person.dto'
 
 class UserDTO {
@@ -21,6 +21,14 @@ class UserDTO {
     @IsObject()
     @IsOptional()
     readonly person?: Omit<PersonDTO, 'id'>
+
+    @IsArray()
+    @IsOptional()
+    readonly followers?: string[]
+
+    @IsArray()
+    @IsOptional()
+    readonly following?: string[]
 
 }
 

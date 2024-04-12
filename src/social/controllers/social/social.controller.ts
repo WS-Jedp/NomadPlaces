@@ -51,7 +51,7 @@ export class SocialController {
         const authUserID = req.user.id;
         return new Response({
             content: {
-                requests: await this.socialService.getUserFollowRequestsPending(authUserID),
+                requests: await this.socialService.getUserSocialRequestsPending(authUserID),
             },
             status: HttpStatus.OK
         })

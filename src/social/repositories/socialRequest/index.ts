@@ -17,6 +17,27 @@ export class SocialRequestRepository {
         });
     }
 
+    public async getUserSocialRequestsPending(userID: string) {
+        return await this.prismaService.userFollowRequest.findMany({
+            where: {
+                OR: [
+                    {
+                        receiverID: userID,
+                        status: FOLLOW_REQUEST_STATUS_ENUM.PENDING,
+                    },
+                    {
+                        senderID: userID,
+                        status: FOLLOW_REQUEST_STATUS_ENUM.PENDING,
+                    }
+                ]
+            },
+            include: {
+                sender: true,
+                receiver: true,
+            }
+        });
+    }
+
     public async getUserFollowRequests(userID: string) {
         return await this.prismaService.userFollowRequest.findMany({
             where: {

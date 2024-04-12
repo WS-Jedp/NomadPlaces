@@ -12,6 +12,8 @@ export class UserDTOHelper {
             profilePicture: user.profilePicture,
             createdDate: user.createdDate,
             person: withPerson ? PersonDTOHelper.fromEntityToDTO(withPerson) : undefined,
+            followers: user.followers,
+            following: user.following,
         };
         return userDTO;
     }

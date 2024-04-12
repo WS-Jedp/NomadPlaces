@@ -10,16 +10,19 @@ export class SocialService {
     private socialRequestRepository: SocialRequestRepository,
   ) {}
 
-  async getUserFollowRequestsPending(userID: string) {
+  async getUserSocialRequestsPending(userID: string) {
     const user = await this.userRepository.findOne(userID);
     if (!user) {
       throw new HttpException('User not found', 404);
     }
 
-    const followRequests =
-      await this.socialRequestRepository.getUserFollowRequests(userID);
+    const socialRequests =
+      await this.socialRequestRepository.getUserSocialRequestsPending(userID);
 
-    return followRequests;
+    return {
+      followRequests: socialRequests.filter(req => req.receiverID === userID),
+      toFollowRequests: socialRequests.filter(req => req.senderID === userID),
+    };
   }
 
   async userFollowRequest(userID: string, userToFollowID: string) {
