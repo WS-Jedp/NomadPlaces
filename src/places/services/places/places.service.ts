@@ -239,4 +239,28 @@ export class PlacesService {
       placeRejected: false
     }
   }
+
+  async getDiscoveredPlacesByUser(userID: string) {
+    const user = await this.userRepository.findOne(userID)
+    if(!user) {
+      throw new HttpException('User not found', 404)
+    }
+
+    const userDiscoveredPlaces = await (await this.placeRepository.getDiscoveredPlacesByUser(userID)).discoveredPlaces
+    return {
+      discoveredPlaces: userDiscoveredPlaces
+    }
+  }
+
+  async getUserPlacesConfirmed(userID: string) {
+    const user = await this.userRepository.findOne(userID)
+    if(!user) {
+      throw new HttpException('User not found', 404)
+    }
+
+    const userConfirmedPlaces = await (await this.placeRepository.getUserPlacesConfirmed(userID)).confirmedPlaces
+    return {
+      confirmedPlaces: userConfirmedPlaces
+    }
+  }
 }

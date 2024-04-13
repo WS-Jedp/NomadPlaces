@@ -123,4 +123,26 @@ export class PlaceRepository {
       },
     });
   }
+
+  getDiscoveredPlacesByUser(userID: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        id: userID,
+      },
+      include: {
+        discoveredPlaces: true,
+      },
+    });
+  }
+
+  getUserPlacesConfirmed(userID: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        id: userID,
+      },
+      include: {
+        confirmedPlaces: true,
+      },
+    });
+  }
 }

@@ -207,4 +207,40 @@ export class PlacesController {
       status: HttpStatus.OK,
     });
   }
+
+  @UseGuards( JwtAuthGuard )
+  @Get('discovered/me')
+  async getDiscoveredPlacesByAuthUser(@Request() req) {
+    const authUserID = req.user.id;
+    return new Response({
+      content: await this.placesService.getDiscoveredPlacesByUser(authUserID),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @UseGuards( JwtAuthGuard )
+  @Get('confirmmed/me')
+  async getDiscoveredPlacesConfirmByAuthUser(@Request() req) {
+    const authUserID = req.user.id;
+    return new Response({
+      content: await this.placesService.getUserPlacesConfirmed(authUserID),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Get('discovered/by/:userID')
+  async getDiscoveredPlacesByUser(@Request() req, @Param('userID') userID: string) {
+    return new Response({
+      content: await this.placesService.getDiscoveredPlacesByUser(userID),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Get('confirmmed/by/:userID')
+  async getDiscoveredPlacesConfirmmedByUser(@Request() req, @Param('userID') userID: string) {
+    return new Response({
+      content: await this.placesService.getUserPlacesConfirmed(userID),
+      status: HttpStatus.OK,
+    });
+  }
 }
