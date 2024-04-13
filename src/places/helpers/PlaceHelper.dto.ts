@@ -14,7 +14,13 @@ class PlaceEntityHelper {
             location: mongoEntity.location,
             multimedia: mongoEntity.multimedia,
             rules: mongoEntity.rules,
-            type: mongoEntity.type
+            type: mongoEntity.type,
+            approvedDate: mongoEntity.approvedDate,
+            confirmationStatus: mongoEntity.confirmationStatus,
+            confirmedByIDs: mongoEntity.confirmedByIDs,
+            discoveredByID: mongoEntity.discoveredByID,
+            discoveredDate: mongoEntity.discoveredDate,
+            rejectedDate: mongoEntity.rejectedDate
         }
     }
 }

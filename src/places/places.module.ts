@@ -6,11 +6,13 @@ import { PlacesService } from './services/places/places.service';
 import { PlaceRepository } from './repository/place.repository';
 import { PlaceSessionsModule } from 'src/place-sessions/place-sessions.module';
 import { StorageService } from 'src/global/services/gcp/storage/storage.service';
+import { PlaceConfirmationRepository } from './repository/place-confirmation-discovered.repository';
+import { UserRepository } from 'src/auth/repositories/user';
 
 
 @Module({
   imports: [PlaceSessionsModule],
   controllers: [PlacesController],
-  providers: [PrismaService, PlacesService, DistanceService, PlaceRepository, StorageService],
+  providers: [PrismaService, PlacesService, DistanceService, PlaceRepository, UserRepository, PlaceConfirmationRepository, StorageService],
 })
 export class PlacesModule {}

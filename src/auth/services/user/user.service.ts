@@ -70,7 +70,9 @@ export class UserService {
       resetPasswordToken: null,
       resetPasswordTokenExpiry: null,
       followers: [],
-      following: []
+      following: [],
+      confirmedPlacesIDs: [],
+      discoveredPlacesIDs: []
     };
 
     const user = await this.userRepository.registerUser(userToCreate);

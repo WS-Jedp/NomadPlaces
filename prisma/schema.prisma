@@ -51,11 +51,16 @@ model User {
   sessionActions    PlaceSessionActions[]
   sessionActionsIDs String[]              @db.ObjectId
 
-  followers         String[] @db.ObjectId
-  following         String[] @db.ObjectId
-  sentFollowRequests   UserFollowRequest[]   @relation("UserFollowRequestSender")
+  followers              String[]            @db.ObjectId
+  following              String[]            @db.ObjectId
+  sentFollowRequests     UserFollowRequest[] @relation("UserFollowRequestSender")
   receivedFollowRequests UserFollowRequest[] @relation("UserFollowRequestReceiver")
 
+  discoveredPlaces    Places[] @relation("PlaceDiscoveredBy")
+  discoveredPlacesIDs String[] @db.ObjectId
+
+  confirmedPlaces    Places[] @relation("PlaceConfirmedBy", fields: [confirmedPlacesIDs], references: [id])
+  confirmedPlacesIDs String[] @db.ObjectId
 
   // Auth data
   resetPasswordToken       String?
@@ -74,25 +79,57 @@ enum FOLLOW_REQUEST_STATUS_ENUM {
 }
 
 model UserFollowRequest {
-  id         String                  @id @default(auto()) @map("_id") @db.ObjectId
-  sender     User                    @relation(name: "UserFollowRequestSender", fields: [senderID], references: [id])
-  senderID   String                  @db.ObjectId
-  receiver   User                    @relation(name: "UserFollowRequestReceiver", fields: [receiverID], references: [id])
-  receiverID String                  @db.ObjectId
+  id         String                     @id @default(auto()) @map("_id") @db.ObjectId
+  sender     User                       @relation(name: "UserFollowRequestSender", fields: [senderID], references: [id])
+  senderID   String                     @db.ObjectId
+  receiver   User                       @relation(name: "UserFollowRequestReceiver", fields: [receiverID], references: [id])
+  receiverID String                     @db.ObjectId
   status     FOLLOW_REQUEST_STATUS_ENUM
 }
 
+enum PlaceConfirmationStatus {
+  RECOMMENDED
+  APPROVED
+  REJECTED
+}
+
 model Places {
-  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   knownFor    String?
   description String?
+
+  discoveredBy   User?    @relation(name: "PlaceDiscoveredBy", fields: [discoveredByID], references: [id])
+  discoveredByID String   @db.ObjectId
+  confirmedBy    User[]   @relation(name: "PlaceConfirmedBy", fields: [confirmedByIDs], references: [id])
+  confirmedByIDs String[] @db.ObjectId
+
+  discoveredDate DateTime?
+  approvedDate   DateTime?
+  rejectedDate   DateTime?
+
+  confirmationStatus PlaceConfirmationStatus @default(RECOMMENDED)
+
   multimedia  Multimedia[]
   type        PlaceTypes[]
   location    Location
   commodities Commodities
   rules       PlaceRules
   sessions    PlaceSession[]
+}
+
+model DiscoveredPlaceConfirmation {
+  id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
+  placeID            String                  @db.ObjectId
+  confirmedByID      String                  @db.ObjectId
+  knownFor           String?
+  description        String?
+  confirmationStatus PlaceConfirmationStatus
+  multimedia         Multimedia[]
+  type               PlaceTypes[]
+  location           Location
+  commodities        Commodities
+  rules              PlaceRules
 }
 
 type Commodities {

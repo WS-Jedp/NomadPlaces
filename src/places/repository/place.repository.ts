@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Multimedia } from '@prisma/client';
+import { Multimedia, PlaceConfirmationStatus, Places } from '@prisma/client';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { Coordinates } from 'src/global/types';
 import { CreatePlaceDTO } from '../dto/CreatePlace.dto';
+import { DiscoveredSpotDTO } from '../dto/DiscoveredSpot.dto';
 
 @Injectable()
 export class PlaceRepository {
@@ -32,13 +33,15 @@ export class PlaceRepository {
     return this.prisma.places.findMany();
   }
 
-  findOne(id: string, withSessions = true) {
+  findOne(id: string, withSessions = true, withConfirmations = false, withDiscoveredBy = false) {
     return this.prisma.places.findUnique({
       where: {
         id: id,
       },
       include: {
         sessions: withSessions,
+        confirmedBy: withConfirmations,
+        discoveredBy: withDiscoveredBy,
       },
     });
   }
@@ -65,5 +68,59 @@ export class PlaceRepository {
         },
       },
     }) as any as Array<PlaceMongoEntity>;
+  }
+
+  // Discover actions
+  addDiscoveredPlace(place: Omit<Places, 'id'>) {
+    return this.prisma.places.create({
+      data: place,
+    });
+  }
+
+  getDiscoveredPlacesInRecommendation() {
+    return this.prisma.places.findMany({
+      where: {
+        confirmationStatus: PlaceConfirmationStatus.RECOMMENDED,
+      },
+    });
+  }
+
+  setDiscoveredPlaceApproved(placeID: string) {
+    return this.prisma.places.update({
+      where: {
+        id: placeID,
+      },
+      data: {
+        confirmationStatus: PlaceConfirmationStatus.APPROVED,
+      },
+    });
+  }
+
+  setDiscoveredPlaceRejected(placeID: string) {
+    return this.prisma.places.update({
+      where: {
+        id: placeID,
+      },
+      data: {
+        confirmationStatus: PlaceConfirmationStatus.REJECTED,
+      },
+      include: {
+        confirmedBy: true,
+        discoveredBy: true,
+      }
+    });
+  }
+
+  addConfirmationBy(placeID: string, confirmedBy: string) {
+    return this.prisma.places.update({
+      where: {
+        id: placeID,
+      },
+      data: {
+        confirmedByIDs: {
+          push: confirmedBy,
+        },
+      },
+    });
   }
 }

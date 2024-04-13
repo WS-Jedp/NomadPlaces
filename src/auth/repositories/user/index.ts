@@ -104,6 +104,8 @@ export class UserRepository {
         });
     }
 
+
+    // Social methods
     public async addFollower(user: User, followerID: string) {
         return await this.prismaService.user.update({
             where: {
@@ -151,6 +153,59 @@ export class UserRepository {
             data: {
                 following: {
                     set: user.following.filter(following => following !== followingID)
+                }
+            }
+        });
+    }
+
+    // Discover and confirmation places methods
+    public async addDiscoveredPlace(user: User, placeID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                discoveredPlacesIDs: {
+                    push: placeID,
+                }
+            }
+        });
+    }
+
+    public async removeDiscoverPlace(user: User, placeID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                discoveredPlacesIDs: {
+                    set: user.discoveredPlacesIDs.filter(place => place !== placeID)
+                }
+            },
+        });
+    }
+
+    public async addConfirmationPlace(user: User, placeID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                confirmedPlacesIDs: {
+                    push: placeID,
+                }
+            }
+        });
+    }
+
+    public async removeConfirmationPlace(user: User, placeID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                confirmedPlacesIDs: {
+                    set: user.confirmedPlacesIDs.filter(place => place !== placeID)
                 }
             }
         });

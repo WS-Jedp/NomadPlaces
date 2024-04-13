@@ -7,14 +7,19 @@ import {
   ParseFilePipe,
   Post,
   Query,
+  Request,
   UploadedFiles,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import Response from 'src/global/models/response';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 import { CreatePlaceDTO } from 'src/places/dto/CreatePlace.dto';
+import { DiscoveredSpotDTO } from 'src/places/dto/DiscoveredSpot.dto';
+import { PlaceConfirmationSpotDTO } from 'src/places/dto/PlaceConfirmation.dto';
 import { PlaceEntityHelper } from 'src/places/helpers/PlaceHelper.dto';
 import { FileSizeValidationPipe } from 'src/places/pipes/file-size-validation/file-size-validation.pipe';
 import { PlacesService } from 'src/places/services/places/places.service';
@@ -156,5 +161,50 @@ export class PlacesController {
   @Post('/delete/:id')
   async delete(@Param('id') id: string) {
     // Handling deleting a place from the database
+  }
+
+  /**
+   * DISCOVERD AND CONFIRMATION ACTIONS
+   * All the actions that involve the discovering and confirmations of new places into the app by the community
+   */
+  @UseGuards( JwtAuthGuard )
+  @Post('discover/new')
+  async newSpotDiscovered(@Request() req, @Body() data: DiscoveredSpotDTO) {
+    const discoveredPlace = await this.placesService.saveDiscoveredPlace(data);
+    return new Response({
+      content: discoveredPlace,
+      status: HttpStatus.CREATED,
+    });
+  }
+
+  @UseGuards( JwtAuthGuard )
+  @Post('discover/confirm/:spotID')
+  async confirmSpot(@Request() req, @Param('spotID') spotID: string, @Body() data: PlaceConfirmationSpotDTO) {
+    const authUserID = req.user.id;
+    const confirmedSpot = await this.placesService.confirmDiscoveredPlace({
+      confirmedBy: authUserID,
+      placeID: data.spotID,
+      placeReview: data.discoveredSpotReview,
+    });
+    return new Response({
+      content: confirmedSpot,
+      status: HttpStatus.OK,
+    });
+
+  }
+
+  @UseGuards( JwtAuthGuard )
+  @Post('discover/reject/:spotID')
+  async rejectSpot(@Request() req, @Param('spotID') spotID: string, @Body() data: PlaceConfirmationSpotDTO) {
+    const authUserID = req.user.id;
+    const rejectedSpot = await this.placesService.rejectDiscoveredPlace({
+      rejectedBy: authUserID,
+      placeID: data.spotID,
+      placeReview: data.discoveredSpotReview,
+    });
+    return new Response({
+      content: rejectedSpot,
+      status: HttpStatus.OK,
+    });
   }
 }
