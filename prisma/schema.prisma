@@ -100,7 +100,7 @@ model Places {
   description String?
 
   discoveredBy   User?    @relation(name: "PlaceDiscoveredBy", fields: [discoveredByID], references: [id])
-  discoveredByID String   @db.ObjectId
+  discoveredByID String?   @db.ObjectId
   confirmedBy    User[]   @relation(name: "PlaceConfirmedBy", fields: [confirmedByIDs], references: [id])
   confirmedByIDs String[] @db.ObjectId
 
