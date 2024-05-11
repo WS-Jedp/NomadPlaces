@@ -122,6 +122,7 @@ model DiscoveredPlaceConfirmation {
   id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
   placeID            String                  @db.ObjectId
   confirmedByID      String                  @db.ObjectId
+  name               String
   knownFor           String?
   description        String?
   confirmationStatus PlaceConfirmationStatus
@@ -139,6 +140,7 @@ type Commodities {
   publicPlugs Boolean?
   plugsAmount Int?
   coworkSpace Boolean?
+  publicBathrooms Boolean?
 }
 
 type PlaceRules {
@@ -149,10 +151,11 @@ type PlaceRules {
   underAge    Boolean?
 }
 
-type PlaceTypes {
-  COFFEE    String
-  NIGHTCLUB String
-  BAR       String
+enum PlaceTypes {
+  LIBRARY
+  COFFEE
+  NIGHTCLUB
+  BAR
 }
 
 type Location {

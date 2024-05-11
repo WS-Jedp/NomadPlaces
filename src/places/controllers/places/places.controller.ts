@@ -178,8 +178,8 @@ export class PlacesController {
   }
 
   @UseGuards( JwtAuthGuard )
-  @Post('discover/confirm/:spotID')
-  async confirmSpot(@Request() req, @Param('spotID') spotID: string, @Body() data: PlaceConfirmationSpotDTO) {
+  @Post('discover/confirm')
+  async confirmSpot(@Request() req, @Body() data: PlaceConfirmationSpotDTO) {
     const authUserID = req.user.id;
     const confirmedSpot = await this.placesService.confirmDiscoveredPlace({
       confirmedBy: authUserID,
@@ -194,8 +194,8 @@ export class PlacesController {
   }
 
   @UseGuards( JwtAuthGuard )
-  @Post('discover/reject/:spotID')
-  async rejectSpot(@Request() req, @Param('spotID') spotID: string, @Body() data: PlaceConfirmationSpotDTO) {
+  @Post('discover/reject')
+  async rejectSpot(@Request() req, @Body() data: PlaceConfirmationSpotDTO) {
     const authUserID = req.user.id;
     const rejectedSpot = await this.placesService.rejectDiscoveredPlace({
       rejectedBy: authUserID,
@@ -204,6 +204,18 @@ export class PlacesController {
     });
     return new Response({
       content: rejectedSpot,
+      status: HttpStatus.OK,
+    });
+  }
+
+  @UseGuards( JwtAuthGuard )
+  @Get('discover/reviews/:spotID')
+  async spotReviews(@Param('spotID') spotID: string) {
+    const data = await this.placesService.getAllSpotReviews(spotID);
+    return new Response({
+      content: {
+        spotReviews: data.spotReviews,
+      },
       status: HttpStatus.OK,
     });
   }
@@ -219,7 +231,7 @@ export class PlacesController {
   }
 
   @UseGuards( JwtAuthGuard )
-  @Get('confirmmed/me')
+  @Get('confirmed/me')
   async getDiscoveredPlacesConfirmByAuthUser(@Request() req) {
     const authUserID = req.user.id;
     return new Response({

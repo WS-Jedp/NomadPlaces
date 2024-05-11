@@ -76,6 +76,10 @@ export class PlacesService {
   // Recommendations
   async saveDiscoveredPlace(spotDiscovered: DiscoveredSpotDTO) {
 
+    if(!spotDiscovered.discoveredByID) {
+      throw new HttpException('User ID not provided', 400)
+    }
+
     const user = await this.userRepository.findOne(spotDiscovered.discoveredByID)
     if(!user) {
       throw new HttpException('User not found', 404)
@@ -145,6 +149,7 @@ export class PlacesService {
 
     const placeConfirmation = await this.placeConfirmationRepository.create({
       placeID,
+      name: placeReview.name,
       confirmedByID: confirmedBy,
       commodities: placeReview.commodities,
       description: placeReview.description,
@@ -212,6 +217,7 @@ export class PlacesService {
 
     const placeConfirmation = await this.placeConfirmationRepository.create({
       placeID,
+      name: placeReview.name,
       confirmedByID: rejectedBy,
       commodities: placeReview.commodities,
       description: placeReview.description,
@@ -237,6 +243,18 @@ export class PlacesService {
       discoveredPlace: place,
       placeConfirmation,
       placeRejected: false
+    }
+  }
+
+  async getAllSpotReviews(spotID: string) {
+    const place = await this.placeRepository.findOne(spotID, true, true, true)
+    if(!place) {
+      throw new HttpException('Place not found', 404)
+    }
+
+    const spotReviews = await this.placeConfirmationRepository.getAllPlaceReviews(spotID)
+    return {
+      spotReviews
     }
   }
 

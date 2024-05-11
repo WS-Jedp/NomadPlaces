@@ -21,4 +21,12 @@ export class PlaceConfirmationRepository {
       },
     });
   }
+
+  getAllPlaceReviews(placeID: string) {
+    return this.prisma.discoveredPlaceConfirmation.findMany({
+      where: {
+        placeID,
+      },
+    });
+  }
 }
