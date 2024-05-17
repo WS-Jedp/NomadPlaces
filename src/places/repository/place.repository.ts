@@ -3,8 +3,10 @@ import { Multimedia, PlaceConfirmationStatus, Places } from '@prisma/client';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { Coordinates } from 'src/global/types';
+import { getColombianCurrentDate } from 'src/global/utils/dates';
 import { CreatePlaceDTO } from '../dto/CreatePlace.dto';
 import { DiscoveredSpotDTO } from '../dto/DiscoveredSpot.dto';
+import { UpdatePlaceDTO } from '../dto/UpdatePlace.dto';
 
 @Injectable()
 export class PlaceRepository {
@@ -70,6 +72,29 @@ export class PlaceRepository {
     }) as any as Array<PlaceMongoEntity>;
   }
 
+  // Update actions
+  update(placeID: string, placeDTO: UpdatePlaceDTO) {
+    return this.prisma.places.update({
+      where: { id: placeID },
+      data: {
+        name: placeDTO.name,
+        description: placeDTO.description,
+        knownFor: placeDTO.knownFor,
+        // multimedia: placeDTO.multimedia,
+        type: placeDTO.type,
+        location: {
+          update: {
+            zone: placeDTO.location.zone,
+            city: placeDTO.location.city,
+            country: placeDTO.location.country,
+          },
+        },
+        commodities: placeDTO.commodities,
+        rules: placeDTO.rules,
+      },
+    });
+  }
+
   // Discover actions
   addDiscoveredPlace(place: Omit<Places, 'id'>) {
     return this.prisma.places.create({
@@ -92,6 +117,7 @@ export class PlaceRepository {
       },
       data: {
         confirmationStatus: PlaceConfirmationStatus.APPROVED,
+        approvedDate: getColombianCurrentDate(),
       },
     });
   }

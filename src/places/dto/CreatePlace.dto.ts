@@ -1,6 +1,5 @@
 import { PlaceTypes, Location, Commodities, PlaceRules, Multimedia } from '@prisma/client'
-import { IsArray, IsNotEmpty, IsObject, IsString,  } from 'class-validator'
-
+import { IsArray, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 class CreatePlaceDTO {
     @IsString()
     @IsNotEmpty()
@@ -8,6 +7,10 @@ class CreatePlaceDTO {
 
     @IsString()
     readonly description?: string
+
+    @IsOptional()
+    @IsString()
+    readonly knownFor?: string
 
     @IsArray()
     readonly multimedia: Multimedia[]
