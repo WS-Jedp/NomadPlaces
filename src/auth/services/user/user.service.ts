@@ -72,7 +72,10 @@ export class UserService {
       followers: [],
       following: [],
       confirmedPlacesIDs: [],
-      discoveredPlacesIDs: []
+      discoveredPlacesIDs: [],
+      gamification: {
+        points: 0,
+      }
     };
 
     const user = await this.userRepository.registerUser(userToCreate);

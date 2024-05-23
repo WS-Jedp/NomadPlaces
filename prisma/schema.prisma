@@ -45,6 +45,9 @@ model User {
   person         People  @relation(fields: [personID], references: [id])
   personID       String  @unique @db.ObjectId
 
+  // Gamification
+  gamification UserGamification?
+
   // Sessions data
   sessions          PlaceSession[]        @relation(fields: [sessionsIDs], references: [id])
   sessionsIDs       String[]              @db.ObjectId
@@ -70,6 +73,10 @@ model User {
 
   // Util data
   createdDate DateTime
+}
+
+type UserGamification {
+  points Int
 }
 
 enum FOLLOW_REQUEST_STATUS_ENUM {

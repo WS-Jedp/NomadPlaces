@@ -30,6 +30,12 @@ class UserDTO {
     @IsOptional()
     readonly following?: string[]
 
+    @IsObject()
+    @IsOptional()
+    readonly gamification: {
+        points: number
+    }
+
 }
 
 export {

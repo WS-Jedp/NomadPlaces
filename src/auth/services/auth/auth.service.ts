@@ -27,7 +27,7 @@ export class AuthService {
     // login method with JWT and passport
     public async login(user: RequestUserDTO) {
         // TODO: Add roles here when needed
-        const payload = { username: user.username, id: user.id, email: user.email, personID: user.personID, firstName: user.firstName };
+        const payload = { username: user.username, id: user.id, email: user.email, personID: user.personID, firstName: user.firstName, gamification: user.gamification };
         return {
             user: payload,
             access_token: this.jwtService.sign(payload),

@@ -48,12 +48,13 @@ export class AuthController {
             username: registeredUser.user.username,
             email: registeredUser.user.email,
             personID: registeredUser.person.id,
-            firstName: registeredUser.person.firstName
+            firstName: registeredUser.person.firstName,
+            gamification: registeredUser.user.gamification,
         });
 
-        await this.authMailerService.welcomeEmail(body.userData.email, {
-            firstName: body.personData.firstName,
-        }, body.language)
+        // await this.authMailerService.welcomeEmail(body.userData.email, {
+        //     firstName: body.personData.firstName,
+        // }, body.language)
 
         return new Response({
             content: loginData,
