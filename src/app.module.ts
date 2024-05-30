@@ -15,6 +15,7 @@ import { PlaceSessionsModule } from './place-sessions/place-sessions.module';
 import { StorageService } from './global/services/gcp/storage/storage.service';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social/social.module';
+import { GamificationModule } from './gamification/gamification.module';
 import config from './config';
 
 const DEFAULT_ENV_FILE_PATH = '.env';
@@ -73,6 +74,7 @@ const DEFAULT_ENV_FILE_PATH = '.env';
     PlaceSessionsModule,
     AuthModule,
     SocialModule,
+    GamificationModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, DistanceService, StorageService],

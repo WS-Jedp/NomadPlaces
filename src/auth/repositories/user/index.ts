@@ -210,4 +210,27 @@ export class UserRepository {
             }
         });
     }
+
+    // Gamification methods
+    public async addGamificationPoints(user: User, points: number) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                gamification: {
+                    upsert: {
+                        set: {
+                            points: user.gamification.points + points,
+                        },
+                        update: {
+                            points: {
+                                increment: points,
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }

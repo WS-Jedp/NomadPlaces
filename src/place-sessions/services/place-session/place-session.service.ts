@@ -64,6 +64,7 @@ export class PlaceSessionService {
       payload: actionPayloadData,
     });
 
+
     // Cache actions
     this.addActionIntoSessionCache(currentSession.placeID, action);
 

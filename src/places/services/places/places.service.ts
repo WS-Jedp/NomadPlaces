@@ -9,6 +9,7 @@ import {
   PlaceTypes,
 } from '@prisma/client';
 import { UserRepository } from 'src/auth/repositories/user';
+import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { StorageService } from 'src/global/services/gcp/storage/storage.service';
 import { Coordinates } from 'src/global/types';
 import { getColombianCurrentDate } from 'src/global/utils/dates';
@@ -27,6 +28,7 @@ export class PlacesService {
     private placeConfirmationRepository: PlaceConfirmationRepository,
     private userRepository: UserRepository,
     private storageService: StorageService,
+    private gamificationService: GamificationService,
   ) {}
 
   private readonly DISCOVERED_PLACE_MAX_CONFIRMATIONS = 2;
@@ -126,9 +128,14 @@ export class PlacesService {
       rejectedDate: null,
     });
 
+    const earnedPoints = this.gamificationService.getDiscoverSpotPointsAmount();
     const updatedUser = await this.userRepository.addDiscoveredPlace(
       user,
       discoveredPlace.id,
+    );
+    const userGamification = await this.gamificationService.addPointsToUser(
+      user.id,
+      earnedPoints,
     );
 
     // TODO: Send email to followers of the user about the new place discovered
@@ -136,6 +143,10 @@ export class PlacesService {
     return {
       discoveredPlace,
       userDiscoveredPlacesIDs: updatedUser.discoveredPlacesIDs,
+      userGamification: {
+        ...userGamification,
+        earnedPoints,
+      },
     };
   }
 
@@ -222,7 +233,6 @@ export class PlacesService {
         ? true
         : false;
 
-      // TODO: Update place according to the confirmations by users
       const allPlaceConfirmations =
         await this.placeConfirmationRepository.getAllPlaceConfirmations(
           placeID,
@@ -237,9 +247,37 @@ export class PlacesService {
         placeUpdatedInfo,
       );
 
-      // TODO: Send email to the user that discovered the place and the users that confirm it that the place was approved
-      // TODO: Gamification part, add points to the users that confirmed the place and extra points to the user that discovered the place
+      const earnedPoints =
+        this.gamificationService.getDiscoverSpotApprovedPointsAmount();
+      await this.gamificationService.addPointsToUser(
+        place.discoveredByID,
+        earnedPoints,
+      );
+
+      const EarnedPointsForconfirmationnUsers =
+        this.gamificationService.getDiscoverSpotConfirmedApprovedPointsAmount();
+      placeUpdated.confirmedByIDs.forEach(async (userID) => {
+        if (userID === place.discoveredByID) return;
+        if (userID === user.id) return;
+        await this.gamificationService.addPointsToUser(
+          userID,
+          EarnedPointsForconfirmationnUsers,
+        );
+      });
+
+      // TODO: Send email to the user that discovered the place and the users that confirm it that the place was approved, also how many points he earned
+
+      // TODO: Send email to the users who confirmed the place that the place was approved and how many points they earned
     }
+
+    const earnedPoints =
+      this.gamificationService.getDiscoverSpotConfirmationPointsAmount(
+        placeUpdated.confirmedByIDs.length === 0,
+      );
+    const userGamification = await this.gamificationService.addPointsToUser(
+      user.id,
+      earnedPoints,
+    );
 
     return {
       placeConfirmation,
@@ -247,6 +285,10 @@ export class PlacesService {
       userConfirmations: userUpdated.confirmedPlacesIDs,
       placeConfirmations: placeUpdated.confirmedByIDs,
       place: placeApprovedUpdated,
+      userGamification: {
+        ...userGamification,
+        earnedPoints,
+      },
     };
   }
 
@@ -459,8 +501,16 @@ export class PlacesService {
       knownFor: knownForSelected,
       commodities: {
         ...commoditiesSelected,
-        wifiSpeed: isNaN(commoditiesSelected.wifiSpeed) || commoditiesSelected.wifiSpeed === undefined ? null : commoditiesSelected.wifiSpeed,
-        plugsAmount: isNaN(commoditiesSelected.plugsAmount) || commoditiesSelected.plugsAmount === undefined ? null : commoditiesSelected.plugsAmount,
+        wifiSpeed:
+          isNaN(commoditiesSelected.wifiSpeed) ||
+          commoditiesSelected.wifiSpeed === undefined
+            ? null
+            : commoditiesSelected.wifiSpeed,
+        plugsAmount:
+          isNaN(commoditiesSelected.plugsAmount) ||
+          commoditiesSelected.plugsAmount === undefined
+            ? null
+            : commoditiesSelected.plugsAmount,
       },
       rules: spotRulesSelected,
     };
@@ -505,7 +555,9 @@ export class PlacesService {
       if (typeof confirmations[0].commodities[property] === 'boolean') {
         mostCommonCommodities[property] = mostCommonValue === 'true';
       } else {
-        mostCommonCommodities[property] = mostCommonValue ? Number(mostCommonValue) : null || null;
+        mostCommonCommodities[property] = mostCommonValue
+          ? Number(mostCommonValue)
+          : null || null;
       }
     }
     return mostCommonCommodities;

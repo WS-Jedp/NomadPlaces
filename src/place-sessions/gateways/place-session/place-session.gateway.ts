@@ -6,7 +6,6 @@ import {
 } from '@nestjs/websockets';
 import { PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
 import { Socket, Server } from 'socket.io';
-import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
 import { getColombianCurrentDate } from 'src/global/utils/dates';
