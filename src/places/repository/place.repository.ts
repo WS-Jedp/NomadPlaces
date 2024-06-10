@@ -3,7 +3,7 @@ import { Multimedia, PlaceConfirmationStatus, Places } from '@prisma/client';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { Coordinates } from 'src/global/types';
-import { getColombianCurrentDate } from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { CreatePlaceDTO } from '../dto/CreatePlace.dto';
 import { DiscoveredSpotDTO } from '../dto/DiscoveredSpot.dto';
 import { UpdatePlaceDTO } from '../dto/UpdatePlace.dto';
@@ -117,7 +117,7 @@ export class PlaceRepository {
       },
       data: {
         confirmationStatus: PlaceConfirmationStatus.APPROVED,
-        approvedDate: getColombianCurrentDate(),
+        approvedDate: getUTCCurrentDate(),
       },
     });
   }

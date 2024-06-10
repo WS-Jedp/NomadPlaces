@@ -1,6 +1,6 @@
 import { Controller, Get, HttpStatus, Param } from '@nestjs/common';
 import Response from 'src/global/models/response';
-import { getColombianCurrentDate } from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
 @Controller('place-session')
@@ -19,7 +19,7 @@ export class PlaceSessionController {
 
     @Get('/current/:id')
     public async getPlaceSession(@Param('id') placeID: string) {
-        const placeSession = await this.placeSessionService.getPlaceCurrentSession(placeID, getColombianCurrentDate())
+        const placeSession = await this.placeSessionService.getPlaceCurrentSession(placeID, getUTCCurrentDate())
         return new Response({
             content: placeSession,
             status: HttpStatus.OK

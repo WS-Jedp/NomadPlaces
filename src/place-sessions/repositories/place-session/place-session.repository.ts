@@ -266,6 +266,18 @@ export class PlaceSessionRepository {
     })
   }
 
+  async findAllJoinActionsFromSession(sessionID: string) {
+    return this.prismaService.placeSessionActions.findMany({
+      where: {
+        placeSessionID: sessionID,
+        type: PLACE_SESSION_ACTIONS_ENUM.JOIN
+      },
+      orderBy: {
+        createdDate: 'asc'
+      }
+    })
+  }
+
   async findLastJoinActionFromUser(sessionID: string, userID: string) {
     return this.prismaService.placeSessionActions.findFirst({
       where: {

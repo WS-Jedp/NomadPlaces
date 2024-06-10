@@ -43,8 +43,12 @@ export class GamificationService {
         let points = 0
         points += this.POINTS_PER_UPDATE_ACTION * userActions.length;
         return points;
-        
     }
+
+    public getPointsPerUpdateAction() {
+        return this.POINTS_PER_UPDATE_ACTION;
+    }
+
     public getJoinSessionPointsAmount(isFirstJoin: boolean) {
         if(isFirstJoin) return this.POINTS_PER_FIRST_IN_SESSION;
         return this.POINTS_PER_JOIN_SESSION;

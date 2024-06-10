@@ -6,6 +6,10 @@ import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 class PlaceSessionCachedDataDTO {
   @IsString()
   @IsMongoId()
+  sessionID: string;
+  
+  @IsString()
+  @IsMongoId()
   placeID: string;
 
   @IsDate()

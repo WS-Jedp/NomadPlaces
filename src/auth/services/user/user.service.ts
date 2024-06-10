@@ -11,7 +11,7 @@ import { UserDTO } from 'src/auth/dto/user/user.dto';
 import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { PeopleRepository } from 'src/auth/repositories/people';
 import { UserRepository } from 'src/auth/repositories/user';
-import { getColombianCurrentDate } from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PersonDTOHelper } from '../../helpers/personDTO.helper';
 
 @Injectable()
@@ -56,7 +56,7 @@ export class UserService {
     const salt = await genSalt()
     const hashedPassword = await hash(userData.password, salt)
 
-    const currentDate = getColombianCurrentDate(new Date())
+    const currentDate = getUTCCurrentDate()
 
     const userToCreate: Omit<User, 'id'> = {
       username: userData.username,

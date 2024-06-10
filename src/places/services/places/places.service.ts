@@ -12,7 +12,7 @@ import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { StorageService } from 'src/global/services/gcp/storage/storage.service';
 import { Coordinates } from 'src/global/types';
-import { getColombianCurrentDate } from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { isImage } from 'src/global/utils/media/isImage';
 import { CreatePlaceDTO } from 'src/places/dto/CreatePlace.dto';
 import { DiscoveredSpotDTO } from 'src/places/dto/DiscoveredSpot.dto';
@@ -120,7 +120,7 @@ export class PlacesService {
       rules: spotDiscovered.rules,
       multimedia: spotDiscovered.multimedia,
       type: spotDiscovered.type,
-      discoveredDate: getColombianCurrentDate(new Date()),
+      discoveredDate: getUTCCurrentDate(),
       confirmationStatus: PlaceConfirmationStatus.RECOMMENDED,
       discoveredByID: spotDiscovered.discoveredByID,
       approvedDate: null,

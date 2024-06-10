@@ -8,7 +8,7 @@ import { PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
 import { Socket, Server } from 'socket.io';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
-import { getColombianCurrentDate } from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
 @WebSocketGateway(3080, {
@@ -66,8 +66,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     const { action, session } = await this.placeSessionService.registerUserIntoSession(
       payload.placeID,
       payload.userID,
-      payload.username,
-      getColombianCurrentDate().toISOString()
+      payload.username
     );
 
     const message = {
@@ -147,17 +146,17 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       createdDateISO: string;
     },
   ) {
+
     const lastAction = await this.placeSessionService.registerUserActionIntoSession({
       userID: payload.userID,
       username: payload.username,
       actionPayload: payload.data,
       sessionID: payload.sessionID,
       actionType: payload.type,
-      createdDateISO: getColombianCurrentDate().toISOString(),
-    });
+    }) as any;
 
     this.server.to(`place-session-${payload.placeID}`)
-      .emit(`place-session-update`, JSON.stringify([lastAction]))
+      .emit(`place-session-update`, JSON.stringify( lastAction.error ? lastAction : [lastAction]))
   }
   
 
@@ -180,7 +179,6 @@ export class PlaceSessionGateway implements OnGatewayConnection {
         username: payload.username,
         actions: payload.actions,
         sessionID: payload.sessionID,
-        createdDateISO: payload.createdDateISO,
         placeID: payload.placeID
       });
 

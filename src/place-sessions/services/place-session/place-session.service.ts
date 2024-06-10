@@ -1,4 +1,10 @@
-import { Injectable, CACHE_MANAGER, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  CACHE_MANAGER,
+  Inject,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import {
   DAY_TIME_SECTION_ENUM,
@@ -15,19 +21,25 @@ import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-se
 import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCachedData.dto';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
-import { getColombianCurrentDate, getCurrentDay, getCurrentMonth } from 'src/global/utils/dates';
+import {
+  getCurrentDay,
+  getCurrentMonth,
+  getUTCCurrentDate,
+} from 'src/global/utils/dates';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import {
   UpdateActionData,
   UPDATE_ACTIONS,
 } from 'src/global/models/placeSession/updateAction.model';
 import { UserRepository } from 'src/auth/repositories/user';
+import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 
 @Injectable()
 export class PlaceSessionService {
   constructor(
     private placeSessionRepository: PlaceSessionRepository,
     private userRepository: UserRepository,
+    private gamificationService: GamificationService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -39,19 +51,56 @@ export class PlaceSessionService {
   public async registerUserActionIntoSession(payload: {
     sessionID: string;
     userID: string;
-    username: string,
+    username: string;
     actionType: PLACE_SESSION_ACTIONS_ENUM;
-    actionPayload: Object;
-    createdDateISO: string;
+    actionPayload: object;
   }) {
-    const currentDate = getColombianCurrentDate( new Date(payload.createdDateISO) );
+    const currentDate = getUTCCurrentDate();
     const actionPayloadData =
       payload.actionPayload as PlaceSessionActionDataPayload[typeof payload.actionType];
 
-    let currentSession: any = await this.getSessionCacheData(payload.sessionID);
+    const sessionActions = await this.placeSessionRepository.findAllActions(
+      payload.sessionID,
+    );
+
+    let currentSession: PlaceSessionCachedDataDTO =
+      await this.getSessionCacheData(payload.sessionID);
 
     if (!currentSession) {
-      currentSession = await this.getSessionData(payload.sessionID)
+      currentSession = (await this.getSessionData(payload.sessionID)) as any;
+    }
+
+    // Check if user is able to register action by time and type
+    if (payload.actionType === PLACE_SESSION_ACTIONS_ENUM.UPDATE) {
+      const dataFromActionPayload = actionPayloadData as any;
+
+      const actionsByUser = sessionActions.filter(
+        (action) => action.userID === payload.userID,
+      );
+      if (actionsByUser.length > 0) {
+        const actionsByUserInLast20Minutes = actionsByUser.filter(
+          (action) =>
+            action.createdDate > new Date(currentDate.getTime() - 20 * 60000),
+        );
+
+        if (actionsByUserInLast20Minutes.length > 0) {
+          const actionsByUserInLast20MinutesWithSameType =
+            actionsByUserInLast20Minutes.find(
+              (action) =>
+                JSON.parse(String(action.payload)).type ==
+                dataFromActionPayload.type,
+            );
+          if (actionsByUserInLast20MinutesWithSameType) {
+            return {
+              error: {
+                type: 'UPDATE_ACTION_LIMIT',
+                message:
+                  'The user already made an action of this type in the last 20 minutes',
+              },
+            };
+          }
+        }
+      }
     }
 
     const action = await this.placeSessionRepository.registerAction({
@@ -64,62 +113,137 @@ export class PlaceSessionService {
       payload: actionPayloadData,
     });
 
-
     // Cache actions
     this.addActionIntoSessionCache(currentSession.placeID, action);
 
     if (payload.actionType == 'RECENT_ACTIVITY') {
       this.addRecentActivityFromSessionCache(currentSession.placeID, action);
     }
+    // Gamification part
+    const earnedPoints = this.gamificationService.getPointsPerUpdateAction();
+    const gamification = await this.gamificationService.addPointsToUser(
+      payload.userID,
+      earnedPoints,
+    );
 
-    return action;
+    return {
+      ...action,
+      userGamification: {
+        ...gamification,
+        earnedPoints,
+      },
+    };
   }
 
   public async registerUserIntoSession(
     placeID: string,
     userID: string,
     username: string,
-    createdDateISO: string,
-  ): Promise<{ session: PlaceSession, action: PlaceSessionActions }> {
-    const createdDate = getColombianCurrentDate();
+  ): Promise<{
+    session: PlaceSession;
+    action: PlaceSessionActions & {
+      userGamification?: { points: number; earnedPoints: number };
+    };
+  }> {
+    const createdDate = getUTCCurrentDate();
     const currentSession = await this.getPlaceCurrentSession(
       placeID,
       createdDate,
     );
+
+    const sessionJoinActions =
+      await this.placeSessionRepository.findAllJoinActionsFromSession(
+        currentSession.id,
+      );
     // const cachedSession = await this.getPlaceCurrentCachedSesssion(placeID)
 
     const userIDOpt = currentSession.usersIDs.find((id) => id === userID);
     if (userIDOpt) {
-
-      const lastLeaveAction =  await this.placeSessionRepository.findLastLeaveActionFromUser(currentSession.id, userIDOpt)
+      const lastLeaveAction =
+        await this.placeSessionRepository.findLastLeaveActionFromUser(
+          currentSession.id,
+          userIDOpt,
+        );
 
       if (lastLeaveAction) {
-        const leaveActionDate = getColombianCurrentDate(lastLeaveAction.createdDate)
-        const tryJoinDate = getColombianCurrentDate(new Date(createdDateISO))
+        const leaveActionDate = lastLeaveAction.createdDate;
+        const tryJoinDate = getUTCCurrentDate();
 
         // If the user left the session before the current date, then he can join again
         if (leaveActionDate < tryJoinDate) {
-          const action = await this.registerJoinActionIntoSession(currentSession, userID, username, createdDate)
+          const action = await this.registerJoinActionIntoSession(
+            currentSession,
+            userID,
+            username,
+            createdDate,
+          );
+
+          // -- Gamification part
+          // Check if the user is joining the session before, if he was, it should not win points
+          if (!lastLeaveAction) {
+            const earnedPoints =
+              this.gamificationService.getJoinSessionPointsAmount(
+                sessionJoinActions.length === 0,
+              );
+            const gamification = await this.gamificationService.addPointsToUser(
+              userID,
+              earnedPoints,
+            );
+            return {
+              session: currentSession,
+              action: {
+                ...action,
+                userGamification: { ...gamification, earnedPoints },
+              },
+            };
+          }
+
           return { session: currentSession, action };
         }
-
       }
 
       return { session: currentSession, action: null };
     }
 
-    const action = await this.registerJoinActionIntoSession(currentSession, userID, username, createdDate)
+    const action = await this.registerJoinActionIntoSession(
+      currentSession,
+      userID,
+      username,
+      createdDate,
+    );
 
-    return { session: currentSession, action };
+    const earnedPoints = this.gamificationService.getJoinSessionPointsAmount(
+      sessionJoinActions.length === 0,
+    );
+    const gamification = await this.gamificationService.addPointsToUser(
+      userID,
+      earnedPoints,
+    );
+
+    return {
+      session: currentSession,
+      action: {
+        ...action,
+        userGamification: {
+          ...gamification,
+          earnedPoints,
+        },
+      },
+    };
   }
 
-  private async registerJoinActionIntoSession(currentSession: PlaceSession, userID: string, username: string, createdDate: Date) {
+  private async registerJoinActionIntoSession(
+    currentSession: PlaceSession,
+    userID: string,
+    username: string,
+    createdDate: Date,
+  ) {
     await this.placeSessionRepository.registerUserIntoSession(
       currentSession.id,
       userID,
     );
 
-    const currentDate = getColombianCurrentDate();
+    const currentDate = getUTCCurrentDate();
 
     const action = await this.registerActionIntoSession({
       createdDate: currentDate,
@@ -131,32 +255,43 @@ export class PlaceSessionService {
       payload: {
         data: {
           username,
-        }
+        },
       },
     });
 
     // Cache actions
     await this.addActionIntoSessionCache(currentSession.placeID, action);
 
-    return action
+    return action;
   }
 
   public async unregisterUserFromSession(
     placeSessionID: string,
     userID: string,
     username: string,
-    placeID: string
+    placeID: string,
   ) {
     const cachedSession = await this.getPlaceCurrentCachedSesssion(placeID);
-    if(cachedSession && !cachedSession.usersInSession.find((user) => user.id === userID)) {
-      new HttpException("User is not in session", HttpStatus.BAD_REQUEST)
+    if (
+      cachedSession &&
+      !cachedSession.usersInSession.find((user) => user.id === userID)
+    ) {
+      new HttpException('User is not in session', HttpStatus.BAD_REQUEST);
     }
 
-    const lastLeaveAction =  await this.placeSessionRepository.findLastLeaveActionFromUser(placeSessionID, userID)
-    const lastJoinAction =  await this.placeSessionRepository.findLastJoinActionFromUser(placeSessionID, userID)
-    const currentDate = getColombianCurrentDate();
+    const lastLeaveAction =
+      await this.placeSessionRepository.findLastLeaveActionFromUser(
+        placeSessionID,
+        userID,
+      );
+    const lastJoinAction =
+      await this.placeSessionRepository.findLastJoinActionFromUser(
+        placeSessionID,
+        userID,
+      );
+    const currentDate = getUTCCurrentDate();
 
-    if(!lastLeaveAction) {
+    if (!lastLeaveAction) {
       const currentAction = await this.registerActionIntoSession({
         createdDate: currentDate,
         dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
@@ -167,7 +302,7 @@ export class PlaceSessionService {
         payload: {
           data: {
             username,
-          }
+          },
         },
       });
 
@@ -177,36 +312,35 @@ export class PlaceSessionService {
       return currentAction;
     }
 
-
     if (
-        lastLeaveAction &&
-        lastJoinAction.createdDate > lastLeaveAction.createdDate &&
-        currentDate > lastJoinAction.createdDate
-      ) {
-        // TODO: Here should be the Redis function to remove the user from the session
-        if(cachedSession) {
-          this.removeUserFromSessionCache(placeID, userID)
-        }
+      lastLeaveAction &&
+      lastJoinAction.createdDate > lastLeaveAction.createdDate &&
+      currentDate > lastJoinAction.createdDate
+    ) {
+      // TODO: Here should be the Redis function to remove the user from the session
+      if (cachedSession) {
+        this.removeUserFromSessionCache(placeID, userID);
+      }
 
-        const currentAction = await this.registerActionIntoSession({
-          createdDate: currentDate,
-          dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
-          placeSessionID: placeSessionID,
-          type: 'LEAVE',
-          userID: userID,
-          username: username,
-          payload: {
-            data: {
-              username,
-            }
+      const currentAction = await this.registerActionIntoSession({
+        createdDate: currentDate,
+        dayTimeSection: this.getDayTimeSection(currentDate.getHours()),
+        placeSessionID: placeSessionID,
+        type: 'LEAVE',
+        userID: userID,
+        username: username,
+        payload: {
+          data: {
+            username,
           },
-        });
-        const currentSession = await this.getSessionData(placeSessionID);
-        this.addActionIntoSessionCache(currentSession.placeID, currentAction);
-        return currentAction;
+        },
+      });
+      const currentSession = await this.getSessionData(placeSessionID);
+      this.addActionIntoSessionCache(currentSession.placeID, currentAction);
+      return currentAction;
     }
 
-    return null
+    return null;
   }
 
   public async registerActionIntoSession(
@@ -222,37 +356,44 @@ export class PlaceSessionService {
     placeID: string;
     sessionID: string;
     userID: string;
-    username: string,
+    username: string;
     actions: {
       type: UPDATE_ACTIONS;
-      data: UpdateActionData
+      data: UpdateActionData;
     }[];
-    createdDateISO: string;
   }) {
-    const savedActions: PlaceSessionActions[] = []
+    const savedActions: PlaceSessionActions[] = [];
+    const errors: any[] = [];
 
     await Promise.all(
-        payload.actions.map(async (action) => {
-            const data = action.data as unknown as UpdateActionData[typeof action.type]
-            const lastAction = await this.registerUserActionIntoSession({
-                sessionID: payload.sessionID,
-                userID: payload.userID,
-                username: payload.username,
-                actionType: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
-                actionPayload: {
-                    type: action.type,
-                    data: {
-                        data,
-                    },
-                },
-                createdDateISO: getColombianCurrentDate( new Date(payload.createdDateISO) ).toISOString(),
-            });
-            this.addActionIntoSessionCache(payload.placeID, lastAction);
-            savedActions.push(lastAction)
-        })
-    )
+      payload.actions.map(async (action) => {
+        const data =
+          action.data as unknown as UpdateActionData[typeof action.type];
+        const lastAction = (await this.registerUserActionIntoSession({
+          sessionID: payload.sessionID,
+          userID: payload.userID,
+          username: payload.username,
+          actionType: PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+          actionPayload: {
+            type: action.type,
+            data: {
+              data,
+            },
+          },
+        })) as any;
+        if (errors.length > 0) return null;
 
-    return savedActions
+        if (lastAction.error) {
+          errors.push(lastAction);
+          return lastAction;
+        }
+
+        this.addActionIntoSessionCache(payload.placeID, lastAction);
+        savedActions.push(lastAction);
+      }),
+    );
+
+    return errors.length > 0 ? errors[0] : savedActions;
   }
 
   /**
@@ -297,50 +438,85 @@ export class PlaceSessionService {
 
   public async getPlaceCurrentCachedSesssion(placeID: string) {
     const cachedSession = await this.getSessionCacheData(placeID);
-    if(!cachedSession) {
-      const colombianDate = getColombianCurrentDate()
+    if (!cachedSession) {
+      const colombianDate = getUTCCurrentDate();
       const session = await this.getPlaceCurrentSession(placeID, colombianDate);
-      const cachedData = await this.setSessionCacheData(placeID, await this.getPlaceSessionCachedData(session));
+      const cachedData = await this.setSessionCacheData(
+        placeID,
+        await this.getPlaceSessionCachedData(session),
+      );
       return cachedData;
     }
     return cachedSession;
   }
 
-  public async getPlaceSessionCachedData(session: PlaceSession): Promise<PlaceSessionCachedDataDTO> {
-
+  public async getPlaceSessionCachedData(
+    session: PlaceSession,
+  ): Promise<PlaceSessionCachedDataDTO> {
     const MAX_ACTIONS_PER_CACHED_SESSION = 21;
-    const actions = await this.placeSessionRepository.findAllActions(session.id);
+    const actions = await this.placeSessionRepository.findAllActions(
+      session.id,
+    );
 
     const users = await this.userRepository.findAllUsersIDIn(session.usersIDs);
     const allMindsetActions = this.getOnlyMindsetActions(actions);
-    const allSessionAmountofPeopleActions = this.getOnlyAmountOfPeopleActions(actions);
-    const allPlaceStatusActions = this.getOnlyPlaceStatusActions(actions)
+    const allSessionAmountofPeopleActions =
+      this.getOnlyAmountOfPeopleActions(actions);
+    const allPlaceStatusActions = this.getOnlyPlaceStatusActions(actions);
 
     return {
+      sessionID: session.id,
       bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
       lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
       lastRecentlyActivities: [],
-      lastUpdate: actions.length > 0 ? actions.filter(action => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE)[0]?.createdDate : null,
+      lastUpdate:
+        actions.length > 0
+          ? actions.filter(
+              (action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE,
+            )[0]?.createdDate
+          : null,
       placeID: session.placeID,
-      usersInSession: this.getUsersInSession(users, actions.filter(action => action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN || action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE)),
-      amountOfPeople: this.getAmountOfPeoplePerAmount(allSessionAmountofPeopleActions),
+      usersInSession: this.getUsersInSession(
+        users,
+        actions.filter(
+          (action) =>
+            action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN ||
+            action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE,
+        ),
+      ),
+      amountOfPeople: this.getAmountOfPeoplePerAmount(
+        allSessionAmountofPeopleActions,
+      ),
       placeStatus: this.getPlaceStatusPerStatus(allPlaceStatusActions), // TODO
-    }
-
+    };
   }
 
   private getOnlyMindsetActions(actions: PlaceSessionActions[]) {
-    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_MINDSET)
+    return actions.filter(
+      (action) =>
+        action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE &&
+        JSON.parse(action.payload.toString()).type ===
+          UPDATE_ACTIONS.PLACE_MINDSET,
+    );
   }
 
   private getOnlyPlaceStatusActions(actions: PlaceSessionActions[]) {
-    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_STATUS)
+    return actions.filter(
+      (action) =>
+        action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE &&
+        JSON.parse(action.payload.toString()).type ===
+          UPDATE_ACTIONS.PLACE_STATUS,
+    );
   }
 
   private getOnlyAmountOfPeopleActions(actions: PlaceSessionActions[]) {
-    return actions.filter((action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE && JSON.parse(action.payload.toString()).type === UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE)
+    return actions.filter(
+      (action) =>
+        action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE &&
+        JSON.parse(action.payload.toString()).type ===
+          UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE,
+    );
   }
-
 
   private getMindsetActionsPerMindset(actions: PlaceSessionActions[]) {
     const AVAILABLE_MINDSETS = [
@@ -348,64 +524,95 @@ export class PlaceSessionService {
       PLACE_MINDSET_ENUM.WORK,
       PLACE_MINDSET_ENUM.STUDY,
       PLACE_MINDSET_ENUM.VIBE,
-    ]
-    const mindsetActionsPerMindset = AVAILABLE_MINDSETS.map(mindset => {
+    ];
+    const mindsetActionsPerMindset = AVAILABLE_MINDSETS.map((mindset) => {
       return {
         mindset,
-        actions: actions.filter(action => this.getMindsetActionPerMindsetType(action) === mindset)
-      }
-    })
+        actions: actions.filter(
+          (action) => this.getMindsetActionPerMindsetType(action) === mindset,
+        ),
+      };
+    });
 
-    return mindsetActionsPerMindset
+    return mindsetActionsPerMindset;
   }
 
-  private getMindsetActionPerMindsetType(action: PlaceSessionActions): PLACE_MINDSET_ENUM {
-    const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_MINDSET']
-    return payload
+  private getMindsetActionPerMindsetType(
+    action: PlaceSessionActions,
+  ): PLACE_MINDSET_ENUM {
+    const payload = JSON.parse(action.payload.toString()).data
+      .data as UpdateActionData['PLACE_MINDSET'];
+    return payload;
   }
 
-  private getUsersInSession(users: Partial<User>[], actions: PlaceSessionActions[]) {
-    const usersInSession = []
-    users.forEach(user => {
-      const lastUserJoinAction = actions.filter(action => action.userID === user.id && action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN).reduce((prev, next) => prev?.createdDate > next?.createdDate ? prev : next, undefined)
-      const lastUserLeaveAction = actions.filter(action => action.userID === user.id && action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE).reduce((prev, next) => prev?.createdDate > next?.createdDate ? prev : next, undefined)
+  private getUsersInSession(
+    users: Partial<User>[],
+    actions: PlaceSessionActions[],
+  ) {
+    const usersInSession = [];
+    users.forEach((user) => {
+      const lastUserJoinAction = actions
+        .filter(
+          (action) =>
+            action.userID === user.id &&
+            action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN,
+        )
+        .reduce(
+          (prev, next) => (prev?.createdDate > next?.createdDate ? prev : next),
+          undefined,
+        );
+      const lastUserLeaveAction = actions
+        .filter(
+          (action) =>
+            action.userID === user.id &&
+            action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE,
+        )
+        .reduce(
+          (prev, next) => (prev?.createdDate > next?.createdDate ? prev : next),
+          undefined,
+        );
 
-      if(!lastUserJoinAction) return
-      if(!lastUserLeaveAction || lastUserJoinAction.createdDate > lastUserLeaveAction.createdDate) {
-        usersInSession.push(user)
+      if (!lastUserJoinAction) return;
+      if (
+        !lastUserLeaveAction ||
+        lastUserJoinAction.createdDate > lastUserLeaveAction.createdDate
+      ) {
+        usersInSession.push(user);
       }
-    })
-    return usersInSession
+    });
+    return usersInSession;
   }
 
   private getAmountOfPeoplePerAmount(actions: PlaceSessionActions[]) {
-    const AMOUNT_OPTIONS = ['0-5', '5-10', '10-15', '15-20', '20-25', '+25']
-    const amountOfPeoplePerAmount = AMOUNT_OPTIONS.map(option => {
+    const AMOUNT_OPTIONS = ['0-5', '5-10', '10-15', '15-20', '20-25', '+25'];
+    const amountOfPeoplePerAmount = AMOUNT_OPTIONS.map((option) => {
       return {
         amount: option,
-        actions: actions.filter(action => {
-          const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_AMOUNT_OF_PEOPLE']
-          return payload.amount === option
+        actions: actions.filter((action) => {
+          const payload = JSON.parse(action.payload.toString()).data
+            .data as UpdateActionData['PLACE_AMOUNT_OF_PEOPLE'];
+          return payload.amount === option;
         }),
-      }
-    })
-    return amountOfPeoplePerAmount
+      };
+    });
+    return amountOfPeoplePerAmount;
   }
 
   private getPlaceStatusPerStatus(actions: PlaceSessionActions[]) {
-    const PLACE_STATUS_OPTIONS = ['OPEN', 'CLOSED']
-    const placeStatusPerStatus = PLACE_STATUS_OPTIONS.map(option => {
+    const PLACE_STATUS_OPTIONS = ['OPEN', 'CLOSED'];
+    const placeStatusPerStatus = PLACE_STATUS_OPTIONS.map((option) => {
       return {
         name: option,
         type: option,
         value: option === 'OPEN' ? true : false,
-        actions: actions.filter(action => {
-          const payload = JSON.parse(action.payload.toString()).data.data as UpdateActionData['PLACE_STATUS']
-          return payload.type === option
+        actions: actions.filter((action) => {
+          const payload = JSON.parse(action.payload.toString()).data
+            .data as UpdateActionData['PLACE_STATUS'];
+          return payload.type === option;
         }),
-      }
-    })
-    return placeStatusPerStatus
+      };
+    });
+    return placeStatusPerStatus;
   }
 
   /**
@@ -424,10 +631,13 @@ export class PlaceSessionService {
     let cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
       `place-session-${placeID}`,
     );
-    if(!cachedData) {
-      const colombianDate = getColombianCurrentDate()
-      const session = await this.getPlaceCurrentSession(placeID, colombianDate);
-      cachedData = await this.getPlaceSessionCachedData(session)
+    if (!cachedData) {
+      const currentUTCDate = getUTCCurrentDate();
+      const session = await this.getPlaceCurrentSession(
+        placeID,
+        currentUTCDate,
+      );
+      cachedData = await this.getPlaceSessionCachedData(session);
     }
     return cachedData;
   }
@@ -507,7 +717,7 @@ export class PlaceSessionService {
       )
         cachedData.lastActions.pop();
     } else {
-      if(!cachedData) {
+      if (!cachedData) {
         const newCachedData = await this.setSessionCacheData(placeID, {
           lastActions: [],
           amountOfPeople: null,
@@ -518,8 +728,8 @@ export class PlaceSessionService {
           placeID: placeID,
           placeStatus: null,
         });
-        if(newCachedData) {
-          cachedData = newCachedData
+        if (newCachedData) {
+          cachedData = newCachedData;
         }
       }
       cachedData.lastActions = [];
@@ -607,11 +817,7 @@ export class PlaceSessionService {
   ) {
     // Handle default creation of a session
     const COLOMBIA_ZERO_TIME = '.350Z';
-    const startDateOfSession = getColombianCurrentDate( new Date(
-      `${currentDate.getFullYear()}-${getCurrentMonth(
-        currentDate,
-      )}-${getCurrentDay(currentDate)}T00:00:00${COLOMBIA_ZERO_TIME}`,
-    ) )
+    const startDateOfSession = getUTCCurrentDate();
 
     const placeSessionDTO = new CreatePlaceSessionDTO({
       createDate: startDateOfSession,
@@ -653,15 +859,10 @@ export class PlaceSessionService {
     return DAY_TIME_SECTION_ENUM.EARLY_MORNING;
   }
 
+  // Get current date end of the day date
   protected getSessionEndDate(currentDate: Date) {
-    const COLOMBIA_ZERO_TIME = '.350Z';
-    const END_HOUR_TIME_FOR_SESSION = '23:59:59' + COLOMBIA_ZERO_TIME;
-
-    const dayOfSession: string = getCurrentDay(currentDate);
-    const monthOfSession: string = getCurrentMonth(currentDate);
-    const yearOfSession: number = currentDate.getFullYear();
-
-    const newDate = `${yearOfSession}-${monthOfSession}-${dayOfSession}T${END_HOUR_TIME_FOR_SESSION}`;
-    return getColombianCurrentDate(new Date(newDate));
+    const newDate = new Date(currentDate);
+    newDate.setHours(23, 59, 59, 999);
+    return newDate;
   }
 }
