@@ -4,10 +4,6 @@ class UpdateUserDTO {
     @IsString()
     @IsNotEmpty()
     userID: string
-
-    @IsOptional()
-    @IsMimeType()
-    profilePicture: Blob
 }
 
 export {

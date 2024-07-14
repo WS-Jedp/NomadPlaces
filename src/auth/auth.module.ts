@@ -10,6 +10,7 @@ import { PeopleRepository } from './repositories/people';
 import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PrismaService,
     LocalStrategy,
     JwtStrategy,
+    StorageService
   ],
   controllers: [AuthController],
 })

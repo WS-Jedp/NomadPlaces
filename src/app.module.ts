@@ -1,4 +1,7 @@
-import { CacheModule, Global, Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
+import type { RedisClientOptions } from 'redis'
+import { redisStore } from 'cache-manager-redis-store'
+import { CacheModule } from '@nestjs/cache-manager'
 import { ConfigModule } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
@@ -12,20 +15,18 @@ import { PlacesModule } from './places/places.module';
 import { PrismaService } from './global/prisma-service/prisma-service.service';
 import { DistanceService } from './global/distance/distance.service';
 import { PlaceSessionsModule } from './place-sessions/place-sessions.module';
-import { StorageService } from './global/services/gcp/storage/storage.service';
+import { StorageService } from './global/services/aws/storage/storage.service';
 import { AuthModule } from './auth/auth.module';
 import { SocialModule } from './social/social.module';
 import { GamificationModule } from './gamification/gamification.module';
 import config from './config';
+import { RedisOptions } from './config/redis.config';
 
 const DEFAULT_ENV_FILE_PATH = '.env';
 
 @Global()
 @Module({
   imports: [
-    CacheModule.register({
-      isGlobal: true,
-    }),
     ConfigModule.forRoot({
       envFilePath: environments[process.env.NODE_ENV] || DEFAULT_ENV_FILE_PATH,
       isGlobal: true,
@@ -42,25 +43,34 @@ const DEFAULT_ENV_FILE_PATH = '.env';
         GCP_CLIENT_EMAIL: Joi.string().required(),
         GCP_MULTIMEDIA_BUCKET: Joi.string().required(),
         GCP_JSON_FILE: Joi.string().required(),
+        AWS_ACCESS_KEY_ID: Joi.string().required(),
+        AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+        AWS_REGION: Joi.string().required(),
+        AWS_SES_USER: Joi.string().required(),
+        AWS_SES_PASSWORD: Joi.string().required(),
+        AWS_S3_BUCKET_NAME: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         SMPT_HOST: Joi.string().required(),
         SMPT_PORT: Joi.number().required(),
         MAILER_USER: Joi.string().required(),
         MAILER_PASSWORD: Joi.string().required(),
+        REDIS_HOST: Joi.string().required(),
+        REDIS_PORT: Joi.number().required()
       }),
     }),
+    CacheModule.registerAsync(RedisOptions),
     MailerModule.forRoot({
       transport: {
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
+        host: 'email-smtp.us-east-2.amazonaws.com',
+        port: 465,
+        secure: true,
         auth: {
-          user: process.env.MAILER_USER,
-          pass: process.env.MAILER_PASSWORD,
+          user: process.env.AWS_SES_USER,
+          pass: process.env.AWS_SES_PASSWORD,
         },
       },
       defaults: {
-        from: "'No Reply' <no-reply@spots.com>",
+        from: "'No Reply' <spots.community.app@gmail.com>",
       },
       template: {
         dir: process.cwd() + '/src/global/mailer/templates/',

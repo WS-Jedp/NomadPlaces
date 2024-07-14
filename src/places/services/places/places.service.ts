@@ -10,7 +10,7 @@ import {
 } from '@prisma/client';
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
-import { StorageService } from 'src/global/services/gcp/storage/storage.service';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { Coordinates } from 'src/global/types';
 import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { isImage } from 'src/global/utils/media/isImage';
@@ -44,10 +44,11 @@ export class PlacesService {
     if (multimedia.length) {
       multimedia.forEach(async (file) => {
         const fileSaved = await this.storageService.save({
-          path: `/places/${newPlace.id}/`,
+          path: `/images/${newPlace.id}/`,
           contentType: file.mimetype,
           media: file.buffer,
           metadata: [],
+          filename: file.originalname,
         });
 
         await this.placeRepository.addMultimediaToPlace(newPlace.id, {
@@ -55,7 +56,7 @@ export class PlacesService {
           type: isImage(file.mimetype)
             ? MULTIMEDIA_TYPE_ENUM.IMAGE
             : MULTIMEDIA_TYPE_ENUM.VIDEO,
-          url: fileSaved.publicUrl(),
+          url: fileSaved.path
         });
       });
     }

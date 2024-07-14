@@ -78,6 +78,18 @@ export class UserRepository {
         });
     }
 
+
+    public async updateProfilePicture(user: User, profilePicture: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                profilePicture,
+            }
+        });
+    }
+
     // Update reset password token
     public async updateResetPasswordToken(user: User, token: string, expireDate: Date) {
         return await this.prismaService.user.update({

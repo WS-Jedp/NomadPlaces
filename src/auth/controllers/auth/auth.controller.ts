@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Req, Request, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RecoverPasswordDTO } from 'src/auth/dto/auth/resetPassword.dto';
 import { UpdatePersonDTO } from 'src/auth/dto/person/updatePerson.dto';
 import { RegisterUserDTO } from 'src/auth/dto/user/registerUser.dto';
@@ -52,9 +53,9 @@ export class AuthController {
             gamification: registeredUser.user.gamification,
         });
 
-        // await this.authMailerService.welcomeEmail(body.userData.email, {
-        //     firstName: body.personData.firstName,
-        // }, body.language)
+        await this.authMailerService.welcomeEmail(body.userData.email, {
+            firstName: body.personData.firstName,
+        }, body.language)
 
         return new Response({
             content: loginData,
@@ -63,8 +64,11 @@ export class AuthController {
     }
 
     @Post('profile/update')
-    async updateProfile(@Request() req, @Body() body: { userData: UpdateUserDTO, personData: UpdatePersonDTO }) {
-        const updated = await this.userService.updateUser(body.userData, body.personData);
+    @UseInterceptors( FileInterceptor('profilePicture') )
+    async updateProfile(@Req() req: Request, @Body() body: { userData: string, personData: string }, @UploadedFile() profilePicture?: Express.Multer.File) {
+        const userData = JSON.parse(body.userData) as unknown as UpdateUserDTO;
+        const personData = JSON.parse(body.personData) as unknown as UpdatePersonDTO;
+        const updated = await this.userService.updateUser(userData, personData, profilePicture);
 
         return new Response({
             content: {

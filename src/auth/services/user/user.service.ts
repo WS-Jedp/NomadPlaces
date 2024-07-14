@@ -11,6 +11,7 @@ import { UserDTO } from 'src/auth/dto/user/user.dto';
 import { UserDTOHelper } from 'src/auth/helpers/userDTO.helper';
 import { PeopleRepository } from 'src/auth/repositories/people';
 import { UserRepository } from 'src/auth/repositories/user';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PersonDTOHelper } from '../../helpers/personDTO.helper';
 
@@ -19,6 +20,7 @@ export class UserService {
   constructor(
     private userRepository: UserRepository,
     private peopleRepository: PeopleRepository,
+    private storageService: StorageService,
   ) {}
 
   // Person
@@ -93,7 +95,8 @@ export class UserService {
     return user;
   }
 
-  public async updateUser(updateUserDTO: UpdateUserDTO, updatePersonDTO: UpdatePersonDTO) {
+  public async updateUser(updateUserDTO: UpdateUserDTO, updatePersonDTO: UpdatePersonDTO, profilePicture?: Express.Multer.File) {
+
     const user = await this.userRepository.findOne(updateUserDTO.userID);
 
     if (!user) {
@@ -107,14 +110,23 @@ export class UserService {
     }
 
     // Handle correctly the profile picture
-    if(updateUserDTO.profilePicture) {
+    let userUpdated: User = user
+    if(profilePicture) {
       // Upload profile picture
+      const { path } = await this.storageService.save({
+        path: `users/${user.id}/profile-picture`,
+        contentType: 'image/png',
+        filename: `${user.id}-profile-picture`,
+        media: profilePicture.buffer,
+        metadata: [{ key: 'profilePicture', value: 'true' }],
+      })
+      userUpdated = await this.userRepository.updateProfilePicture(user, path);
     }
 
     const { id, ...personData } = updatePersonDTO;
     const personUpdated = await this.peopleRepository.updatePerson(person.id, personData);
     return {
-      user: UserDTOHelper.fromEntityToDTO(user),
+      user: UserDTOHelper.fromEntityToDTO(userUpdated),
       person: PersonDTOHelper.fromEntityToDTO(personUpdated),
     };
   }

@@ -20,8 +20,20 @@ export default registerAs('config', () => {
             multimediaBucket: process.env.GCP_MULTIMEDIA_BUCKET,
             jsonFileName: process.env.GCP_JSON_FILE,
         },
+        AWS: {
+            accessKeyID: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            region: process.env.AWS_REGION,
+            s3Bucket: process.env.AWS_S3_BUCKET_NAME,
+            sesUser: process.env.AWS_SES_USER,
+            sesPassword: process.env.AWS_SES_PASSWORD
+        },
         JWT: {
             secret: process.env.JWT_SECRET
+        },
+        REDIS: {
+            host: process.env.REDIS_HOST,
+            port: process.env.REDIS_PORT
         }
     }
 })

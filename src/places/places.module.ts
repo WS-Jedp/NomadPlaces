@@ -5,7 +5,7 @@ import { PlacesController } from './controllers/places/places.controller';
 import { PlacesService } from './services/places/places.service';
 import { PlaceRepository } from './repository/place.repository';
 import { PlaceSessionsModule } from 'src/place-sessions/place-sessions.module';
-import { StorageService } from 'src/global/services/gcp/storage/storage.service';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { PlaceConfirmationRepository } from './repository/place-confirmation-discovered.repository';
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';

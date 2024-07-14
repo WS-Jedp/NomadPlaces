@@ -1,6 +1,5 @@
 import {
   Injectable,
-  CACHE_MANAGER,
   Inject,
   HttpException,
   HttpStatus,
@@ -22,8 +21,6 @@ import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCa
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 import {
-  getCurrentDay,
-  getCurrentMonth,
   getUTCCurrentDate,
 } from 'src/global/utils/dates';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
@@ -33,6 +30,7 @@ import {
 } from 'src/global/models/placeSession/updateAction.model';
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class PlaceSessionService {
