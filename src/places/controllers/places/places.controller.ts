@@ -7,12 +7,13 @@ import {
   ParseFilePipe,
   Post,
   Query,
+  Req,
   Request,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import Response from 'src/global/models/response';
@@ -169,8 +170,10 @@ export class PlacesController {
    */
   @UseGuards( JwtAuthGuard )
   @Post('discover/new')
-  async newSpotDiscovered(@Request() req, @Body() data: DiscoveredSpotDTO) {
-    const discoveredPlace = await this.placesService.saveDiscoveredPlace(data);
+  @UseInterceptors( FilesInterceptor('files', 15), FileSizeValidationPipe)
+  async newSpotDiscovered(@Body() data: { spotDiscovered: string }, @UploadedFiles() multimedia: Express.Multer.File[]) {
+    const discoverdSpotDTO = JSON.parse(data.spotDiscovered) as unknown as DiscoveredSpotDTO;
+    const discoveredPlace = await this.placesService.saveDiscoveredPlace(discoverdSpotDTO, multimedia);
     return new Response({
       content: discoveredPlace,
       status: HttpStatus.CREATED,

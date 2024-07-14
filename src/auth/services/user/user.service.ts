@@ -113,10 +113,12 @@ export class UserService {
     let userUpdated: User = user
     if(profilePicture) {
       // Upload profile picture
+      const fileName = `${getUTCCurrentDate().getTime()}.${profilePicture.mimetype.split('/')[1]}`
+
       const { path } = await this.storageService.save({
-        path: `users/${user.id}/profile-picture`,
+        path: `multimedia/users/${user.id}/${fileName}`,
         contentType: 'image/png',
-        filename: `${user.id}-profile-picture`,
+        filename: `${fileName}`,
         media: profilePicture.buffer,
         metadata: [{ key: 'profilePicture', value: 'true' }],
       })

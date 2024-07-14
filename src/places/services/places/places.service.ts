@@ -13,7 +13,7 @@ import { GamificationService } from 'src/gamification/services/gamification/gami
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { Coordinates } from 'src/global/types';
 import { getUTCCurrentDate } from 'src/global/utils/dates';
-import { isImage } from 'src/global/utils/media/isImage';
+import { isImageOrVideo } from 'src/global/utils/media/validateMimeType';
 import { CreatePlaceDTO } from 'src/places/dto/CreatePlace.dto';
 import { DiscoveredSpotDTO } from 'src/places/dto/DiscoveredSpot.dto';
 import { UpdatePlaceDTO } from 'src/places/dto/UpdatePlace.dto';
@@ -42,9 +42,18 @@ export class PlacesService {
     const newPlace = await this.placeRepository.create(placeDTO);
 
     if (multimedia.length) {
-      multimedia.forEach(async (file) => {
+      multimedia.forEach(async (file, i) => {
+        const fileType = isImageOrVideo(file);
+        const isImage = fileType === MULTIMEDIA_TYPE_ENUM.IMAGE;
+        const fileName = `${newPlace.id}-multimedia-${
+          isImage ? 'image' : 'video'
+        }-${newPlace.multimedia.length + (i + 1)}.${
+          file.mimetype.split('/')[1]
+        }`;
         const fileSaved = await this.storageService.save({
-          path: `/images/${newPlace.id}/`,
+          path: `multimedia/spots/${newPlace.id}/${
+            isImage ? 'images' : 'videos'
+          }/${fileName}`,
           contentType: file.mimetype,
           media: file.buffer,
           metadata: [],
@@ -53,10 +62,11 @@ export class PlacesService {
 
         await this.placeRepository.addMultimediaToPlace(newPlace.id, {
           createdDate: new Date(),
-          type: isImage(file.mimetype)
-            ? MULTIMEDIA_TYPE_ENUM.IMAGE
-            : MULTIMEDIA_TYPE_ENUM.VIDEO,
-          url: fileSaved.path
+          type:
+            fileType === MULTIMEDIA_TYPE_ENUM.IMAGE
+              ? MULTIMEDIA_TYPE_ENUM.IMAGE
+              : MULTIMEDIA_TYPE_ENUM.VIDEO,
+          url: fileSaved.path,
         });
       });
     }
@@ -100,7 +110,10 @@ export class PlacesService {
   }
 
   // Recommendations
-  async saveDiscoveredPlace(spotDiscovered: DiscoveredSpotDTO) {
+  async saveDiscoveredPlace(
+    spotDiscovered: DiscoveredSpotDTO,
+    multimedia: Array<Express.Multer.File> = [],
+  ) {
     if (!spotDiscovered.discoveredByID) {
       throw new HttpException('User ID not provided', 400);
     }
@@ -119,7 +132,7 @@ export class PlacesService {
       location: spotDiscovered.location,
       commodities: spotDiscovered.commodities,
       rules: spotDiscovered.rules,
-      multimedia: spotDiscovered.multimedia,
+      multimedia: [],
       type: spotDiscovered.type,
       discoveredDate: getUTCCurrentDate(),
       confirmationStatus: PlaceConfirmationStatus.RECOMMENDED,
@@ -128,6 +141,37 @@ export class PlacesService {
       confirmedByIDs: [],
       rejectedDate: null,
     });
+
+    // Relate the multimedia to the place
+    if (multimedia.length) {
+      await Promise.all(
+        multimedia.map(async (file, i) => {
+          const fileType = isImageOrVideo(file);
+          const isImage = fileType === MULTIMEDIA_TYPE_ENUM.IMAGE;
+          const fileName = `${discoveredPlace.id}-multimedia-${
+            isImage ? 'image' : 'video'
+          }-${i + 1}.${file.mimetype.split('/')[1]}`;
+          const { path } = await this.storageService.save({
+            path: `multimedia/spots/${discoveredPlace.id}/${
+              isImage ? 'images' : 'videos'
+            }/${fileName}`,
+            contentType: file.mimetype,
+            filename: `${discoveredPlace.id}-multimedia-${file.originalname}`,
+            media: file.buffer,
+            metadata: [
+              { key: 'spot-multimedia', value: 'true' },
+              { key: 'multimedia-type', value: fileType },
+            ],
+          });
+
+          await this.placeRepository.addMultimediaToPlace(discoveredPlace.id, {
+            createdDate: getUTCCurrentDate(),
+            type: fileType,
+            url: path,
+          });
+        }),
+      );
+    }
 
     const earnedPoints = this.gamificationService.getDiscoverSpotPointsAmount();
     const updatedUser = await this.userRepository.addDiscoveredPlace(
