@@ -194,4 +194,17 @@ export class PlaceRepository {
       },
     });
   }
+
+  addVisitedByUser(placeID: string, userID: string) {
+    return this.prisma.places.update({
+      where: {
+        id: placeID,
+      },
+      data: {
+        visitedByIDs: {
+          push: userID,
+        },
+      },
+    });
+  }
 }

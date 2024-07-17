@@ -24,6 +24,7 @@ import {
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { PlaceRepository } from 'src/places/repository/place.repository';
 
 @Injectable()
 export class PlaceSessionService {
@@ -31,6 +32,7 @@ export class PlaceSessionService {
     private placeSessionRepository: PlaceSessionRepository,
     private userRepository: UserRepository,
     private gamificationService: GamificationService,
+    private placeRepository: PlaceRepository,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -156,6 +158,7 @@ export class PlaceSessionService {
 
     if (!user.visitedPlacesIDs.includes(placeID)) {
       await this.userRepository.addVisitedPlaceToUser(user, placeID);
+      await this.placeRepository.addVisitedByUser(placeID, user.id);
     }
 
     const userIDOpt = currentSession.usersIDs.find((id) => id === userID);
