@@ -35,7 +35,12 @@ export class PlaceRepository {
     return this.prisma.places.findMany();
   }
 
-  findOne(id: string, withSessions = true, withConfirmations = false, withDiscoveredBy = false) {
+  findOne(
+    id: string,
+    withSessions = true,
+    withConfirmations = false,
+    withDiscoveredBy = false,
+  ) {
     return this.prisma.places.findUnique({
       where: {
         id: id,
@@ -133,7 +138,7 @@ export class PlaceRepository {
       include: {
         confirmedBy: true,
         discoveredBy: true,
-      }
+      },
     });
   }
 
@@ -168,6 +173,24 @@ export class PlaceRepository {
       },
       include: {
         confirmedPlaces: true,
+      },
+    });
+  }
+
+  getUserPlacesVisited(userID: string) {
+    return this.prisma.user.findFirst({
+      where: {
+        id: userID,
+      },
+      select: {
+        visitedPlaces: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            multimedia: true,
+          },
+        },
       },
     });
   }

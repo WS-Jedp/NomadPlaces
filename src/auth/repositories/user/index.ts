@@ -223,6 +223,20 @@ export class UserRepository {
         });
     }
 
+    // Visited places methods
+    addVisitedPlaceToUser(user: User, placeID: string) {
+        return this.prismaService.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                visitedPlacesIDs: {
+                    push: placeID,
+                }
+            }
+        });
+    }
+
     // Gamification methods
     public async addGamificationPoints(user: User, points: number) {
         return await this.prismaService.user.update({

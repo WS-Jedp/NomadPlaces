@@ -14,6 +14,8 @@ export class UserDTOHelper {
             person: withPerson ? PersonDTOHelper.fromEntityToDTO(withPerson) : undefined,
             followers: user.followers,
             following: user.following,
+            visitedPlacesIDs: user.visitedPlacesIDs,
+            discoveredPlacesIDs: user.discoveredPlacesIDs,
             gamification: {
                 points: user.gamification.points,
             },

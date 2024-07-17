@@ -59,6 +59,9 @@ model User {
   sentFollowRequests     UserFollowRequest[] @relation("UserFollowRequestSender")
   receivedFollowRequests UserFollowRequest[] @relation("UserFollowRequestReceiver")
 
+  visitedPlaces    Places[] @relation("PlaceVisitedBy", fields: [visitedPlacesIDs], references: [id])
+  visitedPlacesIDs String[] @db.ObjectId
+
   discoveredPlaces    Places[] @relation("PlaceDiscoveredBy")
   discoveredPlacesIDs String[] @db.ObjectId
 
@@ -110,6 +113,9 @@ model Places {
   discoveredByID String?   @db.ObjectId
   confirmedBy    User[]   @relation(name: "PlaceConfirmedBy", fields: [confirmedByIDs], references: [id])
   confirmedByIDs String[] @db.ObjectId
+
+  visitedBy      User[]   @relation(name: "PlaceVisitedBy", fields: [visitedByIDs], references: [id])
+  visitedByIDs   String[] @db.ObjectId
 
   discoveredDate DateTime?
   approvedDate   DateTime?

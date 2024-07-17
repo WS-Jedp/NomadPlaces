@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import {
   DAY_TIME_SECTION_ENUM,
@@ -20,9 +15,7 @@ import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-se
 import { PlaceSessionCachedDataDTO } from 'src/place-sessions/dto/placeSessionCachedData.dto';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
-import {
-  getUTCCurrentDate,
-} from 'src/global/utils/dates';
+import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
 import {
   UpdateActionData,
@@ -155,6 +148,16 @@ export class PlaceSessionService {
       );
     // const cachedSession = await this.getPlaceCurrentCachedSesssion(placeID)
 
+    // Register place into visited place of the user
+    const user = await this.userRepository.findOne(userID);
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!user.visitedPlacesIDs.includes(placeID)) {
+      await this.userRepository.addVisitedPlaceToUser(user, placeID);
+    }
+
     const userIDOpt = currentSession.usersIDs.find((id) => id === userID);
     if (userIDOpt) {
       const lastLeaveAction =
@@ -187,6 +190,7 @@ export class PlaceSessionService {
               userID,
               earnedPoints,
             );
+
             return {
               session: currentSession,
               action: {

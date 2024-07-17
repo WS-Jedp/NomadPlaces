@@ -234,6 +234,25 @@ export class PlacesController {
   }
 
   @UseGuards( JwtAuthGuard )
+  @Get('visited/me')
+  async getVisitedPlacesByAuthUser(@Request() req) {
+    const authUserID = req.user.id;
+    return new Response({
+      content: await this.placesService.getUserPlacesVisited(authUserID),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @UseGuards( JwtAuthGuard )
+  @Get('visited/by/:userID')
+  async getVisitedPlacesByUser(@Param('userID') userID: string) {
+    return new Response({
+      content: await this.placesService.getUserPlacesVisited(userID),
+      status: HttpStatus.OK,
+    });
+  }
+
+  @UseGuards( JwtAuthGuard )
   @Get('confirmed/me')
   async getDiscoveredPlacesConfirmByAuthUser(@Request() req) {
     const authUserID = req.user.id;

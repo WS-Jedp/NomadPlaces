@@ -19,6 +19,7 @@ class PlaceEntityHelper {
             confirmationStatus: mongoEntity.confirmationStatus,
             confirmedByIDs: mongoEntity.confirmedByIDs,
             discoveredByID: mongoEntity.discoveredByID,
+            visitedByIDs: [],
             discoveredDate: mongoEntity.discoveredDate,
             rejectedDate: mongoEntity.rejectedDate
         }

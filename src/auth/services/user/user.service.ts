@@ -75,6 +75,7 @@ export class UserService {
       following: [],
       confirmedPlacesIDs: [],
       discoveredPlacesIDs: [],
+      visitedPlacesIDs: [],
       gamification: {
         points: 0,
       }

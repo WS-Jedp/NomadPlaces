@@ -36,6 +36,14 @@ class UserDTO {
         points: number
     }
 
+    @IsArray()
+    @IsOptional()
+    readonly visitedPlacesIDs?: string[]
+
+    @IsArray()
+    @IsOptional()
+    readonly discoveredPlacesIDs?: string[]
+
 }
 
 export {

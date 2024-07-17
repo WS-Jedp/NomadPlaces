@@ -137,6 +137,7 @@ export class PlacesService {
       discoveredDate: getUTCCurrentDate(),
       confirmationStatus: PlaceConfirmationStatus.RECOMMENDED,
       discoveredByID: spotDiscovered.discoveredByID,
+      visitedByIDs: [],
       approvedDate: null,
       confirmedByIDs: [],
       rejectedDate: null,
@@ -459,6 +460,19 @@ export class PlacesService {
     ).confirmedPlaces;
     return {
       confirmedPlaces: userConfirmedPlaces,
+    };
+  }
+
+  async getUserPlacesVisited(userID: string) {
+    const user = await this.userRepository.findOne(userID);
+    if (!user) {
+      throw new HttpException('User not found', 404);
+    }
+
+    const userVisitedPlaces = await this.placeRepository.getUserPlacesVisited(userID)
+
+    return {
+      visitedPlaces: userVisitedPlaces.visitedPlaces
     };
   }
 
