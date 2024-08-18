@@ -7,10 +7,20 @@ import { PrismaService } from 'src/global/prisma-service/prisma-service.service'
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { PeopleRepository } from 'src/auth/repositories/people';
+import { PlaceRepository } from 'src/places/repository/place.repository';
 
 @Module({
-  providers: [PlaceSessionGateway, PlaceSessionService, PlaceSessionRepository, PrismaService, UserRepository, PeopleRepository, GamificationService],
+  providers: [
+    PlaceSessionGateway,
+    PlaceSessionService,
+    PlaceSessionRepository,
+    PrismaService,
+    UserRepository,
+    PeopleRepository,
+    GamificationService,
+    PlaceRepository
+  ],
   controllers: [PlaceSessionController],
-  exports: [PlaceSessionService]
+  exports: [PlaceSessionService],
 })
 export class PlaceSessionsModule {}

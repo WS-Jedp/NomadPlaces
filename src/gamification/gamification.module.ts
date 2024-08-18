@@ -6,10 +6,19 @@ import { GamificationService } from './services/gamification/gamification.servic
 import { GamificationController } from './controllers/gamification/gamification.controller';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
+import { PlaceRepository } from 'src/places/repository/place.repository';
 
 @Module({
   exports: [GamificationService],
-  providers: [GamificationService, PeopleRepository, UserRepository, PrismaService, PlaceSessionService, PlaceSessionRepository],
+  providers: [
+    GamificationService,
+    PeopleRepository,
+    UserRepository,
+    PrismaService,
+    PlaceSessionService,
+    PlaceSessionRepository,
+    PlaceRepository
+  ],
   controllers: [GamificationController],
 })
 export class GamificationModule {}
