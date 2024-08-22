@@ -38,6 +38,9 @@ lerna-debug.log*
 *.env
 .env
 
+# Builds and zip files
+*.zip
+
 # GCP keys
 gcp-keys.json
 
