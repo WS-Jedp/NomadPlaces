@@ -32,6 +32,7 @@ const DEFAULT_ENV_FILE_PATH = '.env';
       isGlobal: true,
       load: [config],
       validationSchema: Joi.object({
+        PORT: Joi.number().required(),
         FRONTEND_URL: Joi.string().required(),
         MONGO_DATABASE_NAME: Joi.string().required(),
         MONGO_DATABASE_PORT: Joi.number().required(),
