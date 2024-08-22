@@ -442,17 +442,21 @@ export class PlaceSessionService {
   }
 
   public async getPlaceCurrentCachedSesssion(placeID: string) {
+    const colombianDate = getUTCCurrentDate();
+    const session = await this.getPlaceCurrentSession(placeID, colombianDate);
+    
     const cachedSession = await this.getSessionCacheData(placeID);
+
     if (!cachedSession) {
-      const colombianDate = getUTCCurrentDate();
-      const session = await this.getPlaceCurrentSession(placeID, colombianDate);
       const cachedData = await this.setSessionCacheData(
         placeID,
         await this.getPlaceSessionCachedData(session),
       );
       return cachedData;
     }
-    return cachedSession;
+
+    const sessionWithAllData = await this.getPlaceSessionCachedData(session)
+    return sessionWithAllData;
   }
 
   public async getPlaceSessionCachedData(
@@ -821,7 +825,6 @@ export class PlaceSessionService {
     sessionEndDate: Date,
   ) {
     // Handle default creation of a session
-    const COLOMBIA_ZERO_TIME = '.350Z';
     const startDateOfSession = getUTCCurrentDate();
 
     const placeSessionDTO = new CreatePlaceSessionDTO({

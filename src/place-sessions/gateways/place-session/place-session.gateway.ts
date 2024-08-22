@@ -72,7 +72,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
     const message = {
       type: PLACE_SESSION_ACTIONS_ENUM.JOIN,
       username: payload.username,
-      createdDateISO: action.createdDate,
+      createdDateISO: action ? action.createdDate : null,
       userID: payload.userID,
       sessionID: session.id,
       action,
