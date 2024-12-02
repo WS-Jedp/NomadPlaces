@@ -46,7 +46,8 @@ const DEFAULT_ENV_FILE_PATH = '.env';
         AWS_S3_BUCKET_NAME: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
         REDIS_HOST: Joi.string().required(),
-        REDIS_PORT: Joi.number().required()
+        REDIS_PORT: Joi.number().required(),
+        REDIS_PASSWORD: Joi.string().required()
       }),
     }),
     CacheModule.registerAsync(RedisOptions),
@@ -61,7 +62,7 @@ const DEFAULT_ENV_FILE_PATH = '.env';
         },
       },
       defaults: {
-        from: "'No Reply' <spots.community.app@gmail.com>",
+        from: "'No Reply' <no-reply@coffi.com.co>",
       },
       template: {
         dir: process.cwd() + '/src/global/mailer/templates/',

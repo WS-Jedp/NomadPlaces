@@ -24,6 +24,12 @@ enum PERSON_INDUSTRY {
   OTHER
 }
 
+enum GENDER_ENUM {
+  MALE
+  FEMALE
+  OTHER
+}
+
 model People {
   id        String            @id @default(auto()) @map("_id") @db.ObjectId
   firstName String
@@ -32,6 +38,7 @@ model People {
   about     String?
   languages String[]
   country   String?
+  gender    GENDER_ENUM?
   industry  PERSON_INDUSTRY[]
   User      User?
 }

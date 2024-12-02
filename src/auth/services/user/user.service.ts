@@ -14,6 +14,7 @@ import { UserRepository } from 'src/auth/repositories/user';
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PersonDTOHelper } from '../../helpers/personDTO.helper';
+import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
 @Injectable()
 export class UserService {
@@ -21,6 +22,7 @@ export class UserService {
     private userRepository: UserRepository,
     private peopleRepository: PeopleRepository,
     private storageService: StorageService,
+    private placeSessionService: PlaceSessionService,
   ) {}
 
   // Person
@@ -241,5 +243,45 @@ export class UserService {
       const updatedUser = await this.userRepository.removeFollowing(user, followingID);
       await this.userRepository.removeFollower(following, userID);
       return updatedUser.following;
+  }
+
+  async getUserLastSession(userID: string) {
+    const user = await this.userRepository.findOne(userID);
+    if (!user) {
+        throw new HttpException('User not found', 404);
+    }
+    if(user.sessionsIDs.length === 0) return null;
+    const lastSession = await this.userRepository.getLastUserSession(user);
+    return lastSession;
+  }
+
+  async getUserLastSessionState(userID: string) {
+    const user = await this.userRepository.findOne(userID);
+    if(!user) {
+      throw new HttpException('User not found', 404);
+    }
+
+    if (!user) {
+        throw new HttpException('User not found', 404);
+    }
+    const lastSession = await this.getUserLastSession(userID)
+
+    if(!lastSession) {
+      return {
+        lastSession: null,
+        inSession: false,
+        expired: false
+      }
+    }
+
+    const currentDate = getUTCCurrentDate()
+    const isSessionExpired = lastSession && lastSession.endDate && lastSession.endDate < currentDate
+    const isUserInSession = await this.placeSessionService.isUserInSessionByActions(lastSession.id, user.id)
+
+    return {
+      lastSession,
+      inSession: isUserInSession,
+      expired: isSessionExpired
+    }
   }
 }

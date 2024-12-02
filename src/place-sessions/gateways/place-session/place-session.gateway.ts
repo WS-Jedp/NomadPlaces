@@ -5,13 +5,14 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
+import { last } from 'rxjs';
 import { Socket, Server } from 'socket.io';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';
-import { getUTCCurrentDate } from 'src/global/utils/dates';
+import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 
-@WebSocketGateway(3080, {
+@WebSocketGateway({
   cors: {
     origin: '*',
   },
@@ -184,5 +185,47 @@ export class PlaceSessionGateway implements OnGatewayConnection {
 
       this.server.to(`place-session-${payload.placeID}`)
       .emit(`place-session-update`, JSON.stringify(lastActions))
+    }
+
+    @SubscribeMessage('place-session-share-recent-activity')
+    async handleShareRecentActivity(
+      client: Socket,
+      payload: {
+        placeID: string,
+        sessionID: string,
+        recentActivity: PlaceRecentActivity
+      }
+    ) {
+
+      const action = {
+        type: UPDATE_ACTIONS.RECENT_ACTIVITY,
+        data: {
+          url: payload.recentActivity.url,
+          type: payload.recentActivity.type,
+          createdDateISO: payload.recentActivity.createdDate,
+          username: payload.recentActivity.username,
+          userID: payload.recentActivity.userID,
+          userPhotoURL: payload.recentActivity.userPhotoURL,
+        }
+      } as any
+      const lastActions = await this.placeSessionService.regsiterMultipleActionsIntoSession(
+        {
+          userID: payload.recentActivity.userID,
+          username: payload.recentActivity.username,
+          actions: [
+            action
+          ],
+          sessionID: payload.sessionID,
+          placeID: payload.placeID,
+        }
+      )
+
+      const message = JSON.stringify(lastActions.error ? lastActions : lastActions[0]);
+      this.server.to(`place-session-${payload.placeID}`)
+      .emit(`place-session-message`, message)
+
+      this.server.to(`place-session-${payload.placeID}`)
+      .emit(`place-session-update`, JSON.stringify(lastActions))
+
     }
 }

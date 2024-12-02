@@ -1,3 +1,4 @@
+import { MULTIMEDIA_TYPE_ENUM } from "@prisma/client";
 import { PLACE_MINDSET_ENUM } from "../mindset/mindset.model";
 
 export enum UPDATE_ACTIONS {
@@ -5,6 +6,7 @@ export enum UPDATE_ACTIONS {
     PLACE_MINDSET = 'PLACE_MINDSET',
     PLACE_STATUS = 'PLACE_STATUS',
     PLACE_RECENT_ACTIVITY = 'PLACE_RECENT_ACTIVITY',
+    RECENT_ACTIVITY = 'RECENT_ACTIVITY'
 }
 
 
@@ -19,5 +21,12 @@ export interface UpdateActionData {
         name: string
         type: string
     },
-    [UPDATE_ACTIONS.PLACE_RECENT_ACTIVITY]: null,
+    [UPDATE_ACTIONS.PLACE_RECENT_ACTIVITY]: {
+        url: string,
+        type: MULTIMEDIA_TYPE_ENUM
+    },
+    [UPDATE_ACTIONS.RECENT_ACTIVITY]: {
+        url: string,
+        type: MULTIMEDIA_TYPE_ENUM
+    },
   }

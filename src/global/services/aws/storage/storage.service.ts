@@ -44,7 +44,7 @@ export class StorageService {
             Body: payload.media,
             ContentType: payload.contentType,
             Metadata: objectMetadata,
-            ACL: 'public-read'
+            ACL: 'public-read' ,
           };
       
           const command = new PutObjectCommand(putObjectParams);
@@ -56,6 +56,47 @@ export class StorageService {
             path: url,
             bucket: this.bucket,
           };
+    }
+
+    async temporalSave(payload: {
+      path: string;
+      contentType: string;
+      media: Buffer;
+      metadata: { [key: string]: string }[];
+      filename: string;
+    }) {
+      // Convert metadata array into a key-value object
+      const objectMetadata = payload.metadata.reduce(
+        (obj, item) => ({ ...obj, ...item }),
+        {}
+      );
+  
+      // Define expiration rule (24 hours from upload time)
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 1); // Add 1 day
+  
+      const putObjectParams: PutObjectCommandInput = {
+        Bucket: this.bucket,
+        Key: payload.path,
+        Body: payload.media,
+        ContentType: payload.contentType,
+        Metadata: {
+          ...objectMetadata,
+          "x-amz-expiration": expirationDate.toISOString(), // Custom metadata for expiration
+        },
+        Tagging: "Expire=true", // Add a tag to manage lifecycle rules
+        ACL: "public-read", // Public read access
+      };
+  
+      const command = new PutObjectCommand(putObjectParams);
+      await this.s3Client.send(command);
+  
+      const url = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${payload.path}`;
+  
+      return {
+        path: url,
+        bucket: this.bucket,
+      };
     }
 
     async getPlaceStorage(placeID: string) {

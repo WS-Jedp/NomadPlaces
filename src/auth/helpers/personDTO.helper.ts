@@ -12,6 +12,7 @@ class PersonDTOHelper {
             country: personDTO.country || null,
             industry: personDTO.industry || [],
             languages: personDTO.languages || [],
+            gender: personDTO.gender || null,
         }
     }
 
@@ -25,6 +26,7 @@ class PersonDTOHelper {
             country: personEntity.country || null,
             industry: personEntity.industry || [],
             languages: personEntity.languages || null,
+            gender: personEntity.gender || null,
         }
     }
 }

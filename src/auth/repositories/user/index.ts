@@ -259,4 +259,31 @@ export class UserRepository {
             }
         });
     }
+
+    // Session methods
+    public async getLastUserSession(user: User) {
+        return await this.prismaService.placeSession.findFirst({
+            where: {
+                id: {
+                    in: user.sessionsIDs,
+                }
+            },
+            orderBy: {
+                createdDate: 'desc'
+            },
+        })
+    }
+
+    public async addSessionToUser(userID: string, sessionID: string) {
+        return await this.prismaService.user.update({
+            where: {
+                id: userID,
+            },
+            data: {
+                sessionsIDs: {
+                    push: sessionID,
+                }
+            }
+        });
+    }
 }

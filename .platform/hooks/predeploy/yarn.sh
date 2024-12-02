@@ -1,7 +1,5 @@
 #!/bin/bash
-if ! command -v yarn &> /dev/null
-then
-    npm install -g yarn
-fi
+npm i -g corepack
 
-yarn install --frozen-lockfile
+corepack enable # Enable corepack
+yarn # Install dependencies with yarn

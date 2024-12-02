@@ -7,6 +7,7 @@ import { GamificationController } from './controllers/gamification/gamification.
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
 import { PlaceRepository } from 'src/places/repository/place.repository';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 
 @Module({
   exports: [GamificationService],
@@ -17,7 +18,8 @@ import { PlaceRepository } from 'src/places/repository/place.repository';
     PrismaService,
     PlaceSessionService,
     PlaceSessionRepository,
-    PlaceRepository
+    PlaceRepository,
+    StorageService
   ],
   controllers: [GamificationController],
 })

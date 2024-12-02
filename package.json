@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -30,7 +30,7 @@
     "@nestjs/jwt": "^10.0.3",
     "@nestjs/mapped-types": "^1.2.2",
     "@nestjs/passport": "^9.0.3",
-    "@nestjs/platform-express": "^10.3.10",
+    "@nestjs/platform-express": "^9.4.3",
     "@nestjs/platform-socket.io": "^9.3.9",
     "@nestjs/websockets": "^9.3.9",
     "@prisma/client": "^4.10.1",

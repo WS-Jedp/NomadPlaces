@@ -7,7 +7,9 @@ import { PrismaService } from 'src/global/prisma-service/prisma-service.service'
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { PeopleRepository } from 'src/auth/repositories/people';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { PlaceRepository } from 'src/places/repository/place.repository';
+import { UserService } from 'src/auth/services/user/user.service';
 
 @Module({
   providers: [
@@ -17,8 +19,10 @@ import { PlaceRepository } from 'src/places/repository/place.repository';
     PrismaService,
     UserRepository,
     PeopleRepository,
+    StorageService,
+    PlaceRepository,
     GamificationService,
-    PlaceRepository
+    UserService,
   ],
   controllers: [PlaceSessionController],
   exports: [PlaceSessionService],

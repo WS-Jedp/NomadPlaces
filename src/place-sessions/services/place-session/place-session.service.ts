@@ -7,6 +7,8 @@ import {
   PlaceSessionActions,
   PLACE_SESSION_ACTIONS_ENUM,
   User,
+  MULTIMEDIA_TYPE_ENUM,
+  UserGamification,
 } from '@prisma/client';
 import { CreatePlaceSessionDTO } from 'src/place-sessions/dto/createPlaceSession.dto';
 import { PlaceSessionHelper } from 'src/place-sessions/dto/helpers/placeSession.helper';
@@ -25,6 +27,8 @@ import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PlaceRepository } from 'src/places/repository/place.repository';
+import { isImageOrVideo } from 'src/global/utils/media/validateMimeType';
+import { StorageService } from 'src/global/services/aws/storage/storage.service';
 
 @Injectable()
 export class PlaceSessionService {
@@ -33,6 +37,7 @@ export class PlaceSessionService {
     private userRepository: UserRepository,
     private gamificationService: GamificationService,
     private placeRepository: PlaceRepository,
+    private storageService: StorageService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -77,20 +82,23 @@ export class PlaceSessionService {
         );
 
         if (actionsByUserInLast20Minutes.length > 0) {
-          const actionsByUserInLast20MinutesWithSameType =
-            actionsByUserInLast20Minutes.find(
-              (action) =>
-                JSON.parse(String(action.payload)).type ==
-                dataFromActionPayload.type,
-            );
-          if (actionsByUserInLast20MinutesWithSameType) {
-            return {
-              error: {
-                type: 'UPDATE_ACTION_LIMIT',
-                message:
-                  'The user already made an action of this type in the last 20 minutes',
-              },
-            };
+          // If the update action is recent activity, then it should not be limited
+          if (dataFromActionPayload.type !== UPDATE_ACTIONS.RECENT_ACTIVITY) {
+            const actionsByUserInLast20MinutesWithSameType =
+              actionsByUserInLast20Minutes.find(
+                (action) =>
+                  JSON.parse(String(action.payload)).type ==
+                  dataFromActionPayload.type,
+              );
+            if (actionsByUserInLast20MinutesWithSameType) {
+              return {
+                error: {
+                  type: 'UPDATE_ACTION_LIMIT',
+                  message:
+                    'The user already made an action of this type in the last 20 minutes',
+                },
+              };
+            }
           }
         }
       }
@@ -126,6 +134,29 @@ export class PlaceSessionService {
         earnedPoints,
       },
     };
+  }
+
+  public async isUserInSessionByActions(
+    placeSessionID: string,
+    userID: string,
+  ): Promise<boolean> {
+    const lastLeaveAction =
+      await this.placeSessionRepository.findLastLeaveActionFromUser(
+        placeSessionID,
+        userID,
+      );
+
+    const lastJoinAction =
+      await this.placeSessionRepository.findLastJoinActionFromUser(
+        placeSessionID,
+        userID,
+      );
+
+    if (lastJoinAction && !lastLeaveAction) return true;
+
+    if (!lastJoinAction || !lastLeaveAction) return false;
+
+    return lastJoinAction.createdDate > lastLeaveAction.createdDate;
   }
 
   public async registerUserIntoSession(
@@ -247,6 +278,7 @@ export class PlaceSessionService {
       currentSession.id,
       userID,
     );
+    await this.userRepository.addSessionToUser(userID, currentSession.id);
 
     const currentDate = getUTCCurrentDate();
 
@@ -428,6 +460,11 @@ export class PlaceSessionService {
         sessionEndDate,
       );
     }
+
+    session.recentActivity = await this.getAllRecentActivitesActionsFromSession(
+      session.actions,
+    );
+
     return session;
   }
 
@@ -444,18 +481,16 @@ export class PlaceSessionService {
   public async getPlaceCurrentCachedSesssion(placeID: string) {
     const colombianDate = getUTCCurrentDate();
     const session = await this.getPlaceCurrentSession(placeID, colombianDate);
-    
+
     const cachedSession = await this.getSessionCacheData(placeID);
 
     if (!cachedSession) {
-      const cachedData = await this.setSessionCacheData(
-        placeID,
-        await this.getPlaceSessionCachedData(session),
-      );
+      const cachedData = await this.getPlaceSessionCachedData(session);
+      await this.setSessionCacheData(placeID, cachedData);
       return cachedData;
     }
 
-    const sessionWithAllData = await this.getPlaceSessionCachedData(session)
+    const sessionWithAllData = await this.getPlaceSessionCachedData(session);
     return sessionWithAllData;
   }
 
@@ -472,12 +507,15 @@ export class PlaceSessionService {
     const allSessionAmountofPeopleActions =
       this.getOnlyAmountOfPeopleActions(actions);
     const allPlaceStatusActions = this.getOnlyPlaceStatusActions(actions);
+    const recentActivities = await this.getAllRecentActivitesActionsFromSession(
+      actions,
+    );
 
     return {
       sessionID: session.id,
       bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
       lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
-      lastRecentlyActivities: [],
+      lastRecentlyActivities: recentActivities,
       lastUpdate:
         actions.length > 0
           ? actions.filter(
@@ -498,6 +536,34 @@ export class PlaceSessionService {
       ),
       placeStatus: this.getPlaceStatusPerStatus(allPlaceStatusActions), // TODO
     };
+  }
+
+  private async getAllRecentActivitesActionsFromSession(
+    actions: PlaceSessionActions[],
+  ): Promise<PlaceRecentActivity[]> {
+    const recentActivities = actions.filter(
+      (action) =>
+        action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE &&
+        JSON.parse(action.payload.toString()).type ===
+          UPDATE_ACTIONS.RECENT_ACTIVITY,
+    );
+
+    const recentActivitiesData: PlaceRecentActivity[] = await Promise.all(
+      recentActivities.map(async (action) => {
+        const payload = JSON.parse(action.payload.toString()).data
+          .data as UpdateActionData['RECENT_ACTIVITY'];
+        const user = await this.userRepository.findOne(action.userID);
+        return {
+          userID: user.id,
+          username: user.username,
+          userPhotoURL: user.profilePicture,
+          createdDate: action.createdDate,
+          ...payload,
+        };
+      }),
+    );
+
+    return recentActivitiesData;
   }
 
   private getOnlyMindsetActions(actions: PlaceSessionActions[]) {
@@ -624,6 +690,80 @@ export class PlaceSessionService {
     return placeStatusPerStatus;
   }
 
+  public async shareRecentActivity(
+    data: { spotID: string; sessionID: string; userID: string },
+    files: Express.Multer.File[],
+  ): Promise<{
+    data: PlaceRecentActivity;
+    userGamification: UserGamification & { earnedPoints: number };
+  }> {
+    if (!files.length) {
+      throw new HttpException('No files provided', HttpStatus.BAD_REQUEST);
+    }
+
+    const multimedia = files[0];
+
+    const user = await this.userRepository.findOne(data.userID);
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.BAD_REQUEST);
+    }
+
+    const session = await this.placeSessionRepository.find(data.sessionID);
+    if (!session) {
+      throw new HttpException('Session not found', HttpStatus.BAD_REQUEST);
+    }
+
+    const spot = await this.placeRepository.findOne(data.spotID);
+    if (!spot) {
+      throw new HttpException('Spot not found', HttpStatus.BAD_REQUEST);
+    }
+
+    // Upload file to S3 and return the URL
+    const fileType = isImageOrVideo(multimedia);
+    const isImage = fileType === MULTIMEDIA_TYPE_ENUM.IMAGE;
+    const fileName = `${data.spotID}-recent-activity-${
+      isImage ? 'image' : 'video'
+    }-${Date.now()}-session-${data.sessionID}.${
+      multimedia.mimetype.split('/')[1]
+    }`;
+
+    // const { path } = await this.storageService.temporalSave({
+    //   path: `multimedia/spots/${data.spotID}/recentActivity/${
+    //     isImage ? 'images' : 'videos'
+    //   }/${fileName}`,
+    //   contentType: multimedia.mimetype,
+    //   filename: `${data.spotID}-multimedia-${multimedia.originalname}`,
+    //   media: multimedia.buffer,
+    //   metadata: [
+    //     { key: 'spot-recent-activity', value: data.sessionID },
+    //     { key: 'multimedia-type', value: fileType },
+    //   ],
+    // });
+
+    const earnedPoints = this.gamificationService.getPointsPerUpdateAction();
+    const gamification = await this.gamificationService.addPointsToUser(
+      data.userID,
+      earnedPoints,
+    );
+
+    return {
+      data: {
+        url: `dummy-path-${fileName}`,
+        type: fileType,
+        createdDate: getUTCCurrentDate(),
+        username: user.username,
+        userID: user.id,
+        userPhotoURL: user.profilePicture,
+      },
+      userGamification: {
+        ...gamification,
+        points: gamification.points,
+        earnedPoints,
+      },
+    };
+  }
+
   /**
    ************************************************************
    * --------- CACHE DATA METHODS
@@ -647,7 +787,23 @@ export class PlaceSessionService {
         currentUTCDate,
       );
       cachedData = await this.getPlaceSessionCachedData(session);
+      this.setSessionCacheData(placeID, cachedData);
     }
+
+    if (
+      cachedData.lastActions.length > 0 &&
+      cachedData.lastActions.some(
+        (cachedData) =>
+          JSON.parse(cachedData.payload.toString()).type ===
+          UPDATE_ACTIONS.RECENT_ACTIVITY,
+      )
+    ) {
+      cachedData.lastRecentlyActivities =
+        await this.getAllRecentActivitesActionsFromSession(
+          cachedData.lastActions,
+        );
+    }
+
     return cachedData;
   }
 
@@ -670,8 +826,14 @@ export class PlaceSessionService {
     placeID: string,
     newData: Partial<PlaceSessionCachedDataDTO>,
   ) {
-    const cachedData = await this.getSessionCacheData(placeID);
-    if (!cachedData) return this.setSessionCacheData(placeID, newData);
+    let cachedData = await this.getSessionCacheData(placeID);
+    if (!cachedData) {
+      const session = await this.getPlaceCurrentSession(
+        cachedData.placeID,
+        getUTCCurrentDate(),
+      );
+      cachedData = await this.getPlaceSessionCachedData(session);
+    }
 
     for (const key of Object.keys(newData)) {
       if (!cachedData[key] || cachedData[key] !== newData[key]) {
