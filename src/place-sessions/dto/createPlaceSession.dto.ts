@@ -13,7 +13,7 @@ class CreatePlaceSessionDTO {
     @IsString()
     @IsNotEmpty()
     @IsMongoId()
-    readonly placeSessionID: string
+    readonly placeID: string
 
     @IsArray()
     readonly usersIDs?: string[]
@@ -27,10 +27,10 @@ class CreatePlaceSessionDTO {
     public constructor(properties: CreatePlaceSessionDTO) {
         this.createDate = properties.createDate
         this.endDate = properties.endDate
-        this.placeSessionID = properties.placeSessionID
         this.usersIDs = properties.usersIDs
         this.recentActivity = properties.recentActivity
         this.actions = properties.actions
+        this.placeID = properties.placeID
     }
 }
 

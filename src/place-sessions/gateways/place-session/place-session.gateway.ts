@@ -154,6 +154,7 @@ export class PlaceSessionGateway implements OnGatewayConnection {
       actionPayload: payload.data,
       sessionID: payload.sessionID,
       actionType: payload.type,
+      placeID: payload.placeID
     }) as any;
 
     this.server.to(`place-session-${payload.placeID}`)

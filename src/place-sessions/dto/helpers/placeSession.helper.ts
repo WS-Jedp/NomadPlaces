@@ -1,7 +1,5 @@
-import { PlaceSession, PlaceSessionActions, PLACE_SESSION_ACTIONS_ENUM, User } from "@prisma/client"
-import { Session } from "inspector"
+import { PlaceSession } from "@prisma/client"
 import { CreatePlaceSessionDTO } from "../createPlaceSession.dto"
-import { PlaceSessionCachedDataDTO } from "../placeSessionCachedData.dto"
 
 class PlaceSessionHelper {
     
@@ -9,7 +7,7 @@ class PlaceSessionHelper {
         return {
             createdDate: placeSessionDTO.createDate,
             endDate: placeSessionDTO.endDate,
-            placeID: placeSessionDTO.placeSessionID,
+            placeID: placeSessionDTO.placeID,
             recentActivity: placeSessionDTO.recentActivity,
             usersIDs: placeSessionDTO.usersIDs,
         }

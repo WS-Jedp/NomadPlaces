@@ -296,9 +296,7 @@ export class PlaceSessionRepository {
   async findPlaceCurrentSession(placeID: string, currentDate: Date, sessionEndDate: Date) {
       return this.prismaService.placeSession.findFirst({
         where: {
-          place: {
-            id: placeID,
-          },
+          placeID: placeID,
           AND: {
             createdDate: {
               lte: currentDate

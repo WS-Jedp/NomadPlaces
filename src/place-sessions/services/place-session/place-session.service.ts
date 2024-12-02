@@ -29,6 +29,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PlaceRepository } from 'src/places/repository/place.repository';
 import { isImageOrVideo } from 'src/global/utils/media/validateMimeType';
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
+import { cache } from 'joi';
 
 @Injectable()
 export class PlaceSessionService {
@@ -48,6 +49,7 @@ export class PlaceSessionService {
    */
   public async registerUserActionIntoSession(payload: {
     sessionID: string;
+    placeID: string,
     userID: string;
     username: string;
     actionType: PLACE_SESSION_ACTIONS_ENUM;
@@ -62,7 +64,7 @@ export class PlaceSessionService {
     );
 
     let currentSession: PlaceSessionCachedDataDTO =
-      await this.getSessionCacheData(payload.sessionID);
+      await this.getSessionCacheData(payload.placeID);
 
     if (!currentSession) {
       currentSession = (await this.getSessionData(payload.sessionID)) as any;
@@ -115,6 +117,7 @@ export class PlaceSessionService {
     });
 
     // Cache actions
+    console.log(currentSession.placeID, "CURRENT SESSION PLACE ID")
     this.addActionIntoSessionCache(currentSession.placeID, action);
 
     if (payload.actionType == 'RECENT_ACTIVITY') {
@@ -407,6 +410,7 @@ export class PlaceSessionService {
         const data =
           action.data as unknown as UpdateActionData[typeof action.type];
         const lastAction = (await this.registerUserActionIntoSession({
+          placeID: payload.placeID,
           sessionID: payload.sessionID,
           userID: payload.userID,
           username: payload.username,
@@ -513,6 +517,7 @@ export class PlaceSessionService {
 
     return {
       sessionID: session.id,
+      placeID: session.placeID,
       bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
       lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
       lastRecentlyActivities: recentActivities,
@@ -522,7 +527,6 @@ export class PlaceSessionService {
               (action) => action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE,
             )[0]?.createdDate
           : null,
-      placeID: session.placeID,
       usersInSession: this.getUsersInSession(
         users,
         actions.filter(
@@ -814,8 +818,7 @@ export class PlaceSessionService {
     try {
       await this.cacheManager.set(`place-session-${placeID}`, cachedData);
       const cached = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
-        `place-session-${placeID}`,
-      );
+        `place-session-${placeID}`);
       return cached;
     } catch (error) {
       return false;
@@ -840,6 +843,8 @@ export class PlaceSessionService {
         cachedData[key] = newData[key];
       }
     }
+
+    console.log(cachedData, "UPDATED CACHED DATA")
 
     return await this.setSessionCacheData(placeID, cachedData);
   }
@@ -907,9 +912,59 @@ export class PlaceSessionService {
     }
 
     cachedData.lastActions.unshift(action);
-    await this.updateSessionCacheData(placeID, {
-      lastActions: cachedData.lastActions,
-    });
+
+    const toUdpate: Partial<PlaceSessionCachedDataDTO> = {
+      lastActions: [...cachedData.lastActions],
+    }
+
+    if(action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN) {
+      const user = await this.userRepository.findOne(action.userID)
+      cachedData.usersInSession && cachedData.usersInSession.unshift({
+        id: user.id,
+        username: user.username,
+        profilePicture: user.profilePicture,
+        email: user.email,
+      })
+      toUdpate.usersInSession = [...cachedData.usersInSession];
+    }
+
+    if(action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE) {
+      cachedData.usersInSession = cachedData.usersInSession.filter(u => u.id !== action.userID)
+      toUdpate.usersInSession = [...cachedData.usersInSession];
+    }
+
+    if(action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE) {
+
+      const actionPayload = JSON.parse(action.payload.toString())
+        if(actionPayload.type === UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE) {
+          const amountOfPeople = actionPayload.data.data.amount
+          const amountOfPeopleAction = cachedData.amountOfPeople.find(a => a.amount == amountOfPeople)
+          if(amountOfPeopleAction) {
+            amountOfPeopleAction.actions.unshift(action)
+          } else {
+            cachedData.amountOfPeople.push({
+              amount: amountOfPeople,
+              actions: [action]
+            })
+          }
+          toUdpate.amountOfPeople = [...cachedData.amountOfPeople]
+        }
+
+        if(actionPayload.type === UPDATE_ACTIONS.PLACE_MINDSET) {
+          const mindset = actionPayload.data.data
+          const mindsetAction = cachedData.bestMindsetTo.find(a => a.mindset === mindset)
+          if(mindsetAction) {
+            mindsetAction.actions.unshift(action)
+          } else {
+            cachedData.bestMindsetTo.push({
+              mindset,
+              actions: [action]
+            })
+          }
+          toUdpate.bestMindsetTo = [...cachedData.bestMindsetTo]
+        }
+    }
+    await this.updateSessionCacheData(placeID, toUdpate);
     return cachedData.lastActions;
   }
 
@@ -992,7 +1047,7 @@ export class PlaceSessionService {
     const placeSessionDTO = new CreatePlaceSessionDTO({
       createDate: startDateOfSession,
       endDate: sessionEndDate,
-      placeSessionID: placeID,
+      placeID
     });
 
     const placeSessionEntity = await this.placeSessionRepository.create(
