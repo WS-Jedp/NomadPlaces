@@ -10,6 +10,7 @@ import { PeopleRepository } from 'src/auth/repositories/people';
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { PlaceRepository } from 'src/places/repository/place.repository';
 import { UserService } from 'src/auth/services/user/user.service';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Module({
   providers: [
@@ -23,6 +24,7 @@ import { UserService } from 'src/auth/services/user/user.service';
     PlaceRepository,
     GamificationService,
     UserService,
+    SubscriptionService,
   ],
   controllers: [PlaceSessionController],
   exports: [PlaceSessionService],

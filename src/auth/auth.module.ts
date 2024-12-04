@@ -15,6 +15,7 @@ import { PlaceSessionService } from 'src/place-sessions/services/place-session/p
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { PlaceRepository } from 'src/places/repository/place.repository';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { PlaceRepository } from 'src/places/repository/place.repository';
     PlaceSessionService,
     PlaceSessionRepository,
     GamificationService,
-    PlaceRepository
+    PlaceRepository,
+    SubscriptionService,
   ],
   controllers: [AuthController],
 })

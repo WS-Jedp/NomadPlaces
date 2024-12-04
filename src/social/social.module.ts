@@ -11,10 +11,24 @@ import { PlaceSessionService } from 'src/place-sessions/services/place-session/p
 import { PlaceSessionRepository } from 'src/place-sessions/repositories/place-session/place-session.repository';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { PlaceRepository } from 'src/places/repository/place.repository';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Module({
   controllers: [SocialController],
-  providers: [SocialService, UserService, PeopleRepository, UserRepository, PrismaService, SocialRequestRepository, StorageService, PlaceSessionRepository, PlaceSessionService, GamificationService, PlaceRepository],
-  exports: [SocialRequestRepository]
+  providers: [
+    SocialService,
+    UserService,
+    PeopleRepository,
+    UserRepository,
+    PrismaService,
+    SocialRequestRepository,
+    StorageService,
+    PlaceSessionRepository,
+    PlaceSessionService,
+    GamificationService,
+    PlaceRepository,
+    SubscriptionService,
+  ],
+  exports: [SocialRequestRepository],
 })
 export class SocialModule {}

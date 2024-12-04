@@ -1,4 +1,4 @@
-import { UserGamification } from '@prisma/client'
+import { Subscription, UserGamification } from '@prisma/client'
 import { IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 import { PersonDTO } from '../person/person.dto'
 
@@ -28,6 +28,10 @@ class RequestUserDTO {
     @IsObject()
     @IsOptional()
     readonly gamification: UserGamification
+
+    @IsObject()
+    @IsOptional()
+    readonly subscription: Subscription
 
 }
 

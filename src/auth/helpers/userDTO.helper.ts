@@ -1,4 +1,4 @@
-import { People, User } from "@prisma/client";
+import { People, Subscription, User } from "@prisma/client";
 import { UserDTO } from "../dto/user/user.dto";
 import { PersonDTOHelper } from "./personDTO.helper";
 
@@ -19,6 +19,7 @@ export class UserDTOHelper {
             gamification: {
                 points: user.gamification.points,
             },
+            subscription: user.subscription
         };
         return userDTO;
     }

@@ -21,6 +21,7 @@ import { SocialModule } from './social/social.module';
 import { GamificationModule } from './gamification/gamification.module';
 import config from './config';
 import { RedisOptions } from './config/redis.config';
+import { SubscriptionModule } from './subscription/subscription.module';
 
 const DEFAULT_ENV_FILE_PATH = '.env';
 
@@ -77,6 +78,7 @@ const DEFAULT_ENV_FILE_PATH = '.env';
     AuthModule,
     SocialModule,
     GamificationModule,
+    SubscriptionModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, DistanceService, StorageService],

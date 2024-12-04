@@ -1,5 +1,6 @@
 import { IsArray, IsMongoId, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
 import { PersonDTO } from '../person/person.dto'
+import { Subscription } from '@prisma/client'
 
 class UserDTO {
     @IsString()
@@ -43,6 +44,10 @@ class UserDTO {
     @IsArray()
     @IsOptional()
     readonly discoveredPlacesIDs?: string[]
+
+    @IsObject()
+    @IsOptional()
+    readonly subscription?: Subscription
 
 }
 

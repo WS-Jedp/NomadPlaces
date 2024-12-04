@@ -1,36 +1,33 @@
-import { Injectable } from "@nestjs/common";
-import { People, User } from "@prisma/client";
-import { PrismaService } from "src/global/prisma-service/prisma-service.service";
+import { Injectable } from '@nestjs/common';
+import { People, User } from '@prisma/client';
+import { PrismaService } from 'src/global/prisma-service/prisma-service.service';
 
 @Injectable()
 export class PeopleRepository {
-    constructor(
-        private prismaService: PrismaService
-    ) {}
+    constructor(private prismaService: PrismaService) {}
+    
+  // ID Methods
+  public async findOne(id: string) {
+    return await this.prismaService.people.findUnique({
+      where: {
+        id,
+      },
+    });
+  }
 
+  // Create person
+  public async createPerson(data: Omit<People, 'id'>) {
+    return await this.prismaService.people.create({
+      data,
+    });
+  }
 
-    // ID Methods
-    public async findOne(id: string) {
-        return await this.prismaService.people.findUnique({
-            where: {
-                id,
-            }
-        });
-    }
-
-    // Create person
-    public async createPerson(data: Omit<People, 'id'>) {
-        return await this.prismaService.people.create({
-            data,
-        });
-    }
-
-    public async updatePerson(id: string, data: Partial<People>) {
-        return await this.prismaService.people.update({
-            where: {
-                id,
-            },
-            data,
-        });
-    }
+  public async updatePerson(id: string, data: Partial<People>) {
+    return await this.prismaService.people.update({
+      where: {
+        id,
+      },
+      data,
+    });
+  }
 }

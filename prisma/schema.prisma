@@ -21,6 +21,17 @@ enum PERSON_INDUSTRY {
   MARKETER
   ADMINISTRATOR
   WRITER
+  TOURIST
+  PHOTOGRAPHER
+  MUSICIAN
+  SALESMAN
+  MANAGER
+  FINNANCE
+  LAWYER
+  TEACHER
+  RESEARCHER
+  ENGINEER
+  ARCHITECT
   OTHER
 }
 
@@ -41,6 +52,26 @@ model People {
   gender    GENDER_ENUM?
   industry  PERSON_INDUSTRY[]
   User      User?
+}
+
+enum SUBSCRIPTION_PLAN_ENUM {
+  EXPLORER_PLAN
+  WANDERLUST_PLAN
+  NOMAD_PLAN
+}
+
+enum SUBSCRIPTION_STATUS_ENUM {
+  PENDING
+  APPROVED
+  REJECTEED
+  CANCELED
+}
+
+type Subscription {
+  type        SUBSCRIPTION_PLAN_ENUM
+  status      SUBSCRIPTION_STATUS_ENUM?
+  createdDate DateTime
+  updatedDate DateTime
 }
 
 model User {
@@ -83,6 +114,9 @@ model User {
 
   // Util data
   createdDate DateTime
+
+  // Subscription data
+  subscription   Subscription
 }
 
 type UserGamification {
@@ -117,12 +151,12 @@ model Places {
   description String?
 
   discoveredBy   User?    @relation(name: "PlaceDiscoveredBy", fields: [discoveredByID], references: [id])
-  discoveredByID String?   @db.ObjectId
+  discoveredByID String?  @db.ObjectId
   confirmedBy    User[]   @relation(name: "PlaceConfirmedBy", fields: [confirmedByIDs], references: [id])
   confirmedByIDs String[] @db.ObjectId
 
-  visitedBy      User[]   @relation(name: "PlaceVisitedBy", fields: [visitedByIDs], references: [id])
-  visitedByIDs   String[] @db.ObjectId
+  visitedBy    User[]   @relation(name: "PlaceVisitedBy", fields: [visitedByIDs], references: [id])
+  visitedByIDs String[] @db.ObjectId
 
   discoveredDate DateTime?
   approvedDate   DateTime?
@@ -154,12 +188,12 @@ model DiscoveredPlaceConfirmation {
 }
 
 type Commodities {
-  publicWifi  Boolean?
-  wifiSpeed   Int?
-  parking     Boolean?
-  publicPlugs Boolean?
-  plugsAmount Int?
-  coworkSpace Boolean?
+  publicWifi      Boolean?
+  wifiSpeed       Int?
+  parking         Boolean?
+  publicPlugs     Boolean?
+  plugsAmount     Int?
+  coworkSpace     Boolean?
   publicBathrooms Boolean?
 }
 

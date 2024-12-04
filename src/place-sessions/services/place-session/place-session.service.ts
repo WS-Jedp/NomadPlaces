@@ -117,7 +117,6 @@ export class PlaceSessionService {
     });
 
     // Cache actions
-    console.log(currentSession.placeID, "CURRENT SESSION PLACE ID")
     this.addActionIntoSessionCache(currentSession.placeID, action);
 
     if (payload.actionType == 'RECENT_ACTIVITY') {

@@ -3,35 +3,47 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RequestUserDTO } from 'src/auth/dto/user/requestUser.dto';
 import { UserService } from '../user/user.service';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private userService: UserService,
-        private jwtService: JwtService,
-    ) {}
+  constructor(
+    private userService: UserService,
+    private subscriptionService: SubscriptionService,
+    private jwtService: JwtService,
+  ) {}
 
-    public async validateUser(emailOrUsername: string, password: string) {
-        const user = await this.userService.findUserByEmailOrUsername(emailOrUsername);
-        if(!user) return null;
+  public async validateUser(emailOrUsername: string, password: string) {
+    const user = await this.userService.findUserByEmailOrUsername(
+      emailOrUsername,
+    );
+    if (!user) return null;
 
-        const isPasswordValid = await compare(password, user.password)
-        if (isPasswordValid) {
-            const person = await this.userService.getPerson(user.personID);
-            const { password, ...rest } = user
-            return {...rest, firstName: person.firstName};
-        }
-        return null;
+    const isPasswordValid = await compare(password, user.password);
+    if (isPasswordValid) {
+      const person = await this.userService.getPerson(user.personID);
+      const { password, ...rest } = user;
+    
+      return { ...rest, firstName: person.firstName };
     }
+    return null;
+  }
 
-    // login method with JWT and passport
-    public async login(user: RequestUserDTO) {
-        // TODO: Add roles here when needed
-        const payload = { username: user.username, id: user.id, email: user.email, personID: user.personID, firstName: user.firstName, gamification: user.gamification };
-        return {
-            user: payload,
-            access_token: this.jwtService.sign(payload),
-        };
-    }
-
+  // login method with JWT and passport
+  public async login(user: RequestUserDTO) {
+    // TODO: Add roles here when needed
+    const payload = {
+      username: user.username,
+      id: user.id,
+      email: user.email,
+      personID: user.personID,
+      firstName: user.firstName,
+      gamification: user.gamification,
+      subscription: user.subscription
+    };
+    return {
+      user: payload,
+      access_token: this.jwtService.sign(payload),
+    };
+  }
 }

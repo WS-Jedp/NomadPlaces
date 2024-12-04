@@ -1,4 +1,18 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Req, Request, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  Req,
+  Request,
+  UploadedFile,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RecoverPasswordDTO } from 'src/auth/dto/auth/resetPassword.dto';
 import { UpdatePersonDTO } from 'src/auth/dto/person/updatePerson.dto';
@@ -12,137 +26,174 @@ import { AuthService } from 'src/auth/services/auth/auth.service';
 import { AuthEmailService } from 'src/auth/services/mailer/mailer.service';
 import { UserService } from 'src/auth/services/user/user.service';
 import Response from 'src/global/models/response';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Controller('auth')
 export class AuthController {
+  constructor(
+    private authService: AuthService,
+    private userService: UserService,
+    private authMailerService: AuthEmailService,
+    private subscriptionService: SubscriptionService,
+  ) {}
 
-    constructor(
-        private authService: AuthService,
-        private userService: UserService,
-        private authMailerService: AuthEmailService
-    ) {}
+  @UseGuards(LocalAuthGuard)
+  @Post('login')
+  async login(@Request() req) {
+    return new Response({
+      content: await this.authService.login(req.user as RequestUserDTO),
+      status: HttpStatus.OK,
+    });
+  }
 
-    @UseGuards( LocalAuthGuard )
-    @Post('login')
-    async login(@Request() req) {
-        return new Response({
-            content: await this.authService.login(req.user as RequestUserDTO),
-            status: HttpStatus.OK,
-        })
-    }
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  async getProfile(@Request() req) {
+    const userWithPerson = await this.userService.getUserWithPerson(
+      req.user.id,
+    );
+    return new Response({
+      content: UserDTOHelper.fromEntityToDTO(
+        userWithPerson,
+        userWithPerson.person,
+      ),
+      status: HttpStatus.OK,
+    });
+  }
 
-    @UseGuards( JwtAuthGuard )
-    @Get('profile')
-    async getProfile(@Request() req) {
-        const userWithPerson = await this.userService.getUserWithPerson(req.user.id);
-        return new Response({
-            content: UserDTOHelper.fromEntityToDTO(userWithPerson, userWithPerson.person),
-            status: HttpStatus.OK,
-        })
-    }
+  @Post('register')
+  async register(@Body() body: RegisterUserDTO) {
+    const registeredUser = await this.userService.registerUser(
+      body.userData,
+      body.personData,
+    );
     
-    @Post('register')
-    async register(@Body() body: RegisterUserDTO) {
-        const registeredUser = await this.userService.registerUser(body.userData, body.personData);
-        const loginData = await this.authService.login({
-            id: registeredUser.user.id,
-            username: registeredUser.user.username,
-            email: registeredUser.user.email,
-            personID: registeredUser.person.id,
-            firstName: registeredUser.person.firstName,
-            gamification: registeredUser.user.gamification,
-        });
+    const loginData = await this.authService.login({
+      id: registeredUser.user.id,
+      username: registeredUser.user.username,
+      email: registeredUser.user.email,
+      personID: registeredUser.person.id,
+      firstName: registeredUser.person.firstName,
+      gamification: registeredUser.user.gamification,
+      subscription: registeredUser.user.subscription,
+    });
 
-        await this.authMailerService.welcomeEmail(body.userData.email, {
-            firstName: body.personData.firstName,
-        }, body.language)
+    await this.authMailerService.welcomeEmail(
+      body.userData.email,
+      {
+        firstName: body.personData.firstName,
+      },
+      body.language,
+    );
 
-        return new Response({
-            content: loginData,
-            status: HttpStatus.CREATED,
-        })
+    return new Response({
+      content: loginData,
+      status: HttpStatus.CREATED,
+    });
+  }
+
+  @Post('profile/update')
+  @UseInterceptors(FileInterceptor('profilePicture'))
+  async updateProfile(
+    @Req() req: Request,
+    @Body() body: { userData: string; personData: string },
+    @UploadedFile() profilePicture?: Express.Multer.File,
+  ) {
+    const userData = JSON.parse(body.userData) as unknown as UpdateUserDTO;
+    const personData = JSON.parse(
+      body.personData,
+    ) as unknown as UpdatePersonDTO;
+    const updated = await this.userService.updateUser(
+      userData,
+      personData,
+      profilePicture,
+    );
+
+    return new Response({
+      content: {
+        message: 'Profile updated successfully',
+        data: updated,
+      },
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Post('recover-password')
+  async resetPassword(@Body() body: RecoverPasswordDTO) {
+    const user = await this.userService.findUserByEmailOrUsername(body.email);
+    if (!user) {
+      return new Response({
+        content: {
+          message: 'User not found',
+          data: null,
+        },
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+    const resetLink = await this.userService.generateResetPasswordLink(user);
+    await this.authMailerService.resetPassword(
+      body.email,
+      resetLink,
+      body.language,
+    );
+
+    return new Response({
+      content: true,
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Post('reset-password')
+  async resetPasswordConfirm(
+    @Body() body: { email: string; token: string; newPassword: string },
+  ) {
+    const user = await this.userService.findUserByEmailOrUsername(body.email);
+    if (!user) {
+      return new Response({
+        content: {
+          message: 'User not found',
+          data: null,
+        },
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+    const updatedUser = await this.userService.resetPassword(
+      user,
+      body.token,
+      body.newPassword,
+    );
+    return new Response({
+      content: {
+        message: 'Password updated successfully',
+        user: updatedUser,
+      },
+      status: HttpStatus.OK,
+    });
+  }
+
+  @Get('profile/confirm')
+  async confirmProfile(@Query('usernameOrEmail') usernameOrEmail: string) {
+    const user = await this.userService.findUserByEmailOrUsername(
+      usernameOrEmail,
+    );
+    if (user) {
+      return new Response({
+        content: {
+          byUsername: user.username === usernameOrEmail ? true : false,
+          byEmail: user.email === usernameOrEmail ? true : false,
+          exists: true,
+        },
+        status: HttpStatus.OK,
+      });
     }
 
-    @Post('profile/update')
-    @UseInterceptors( FileInterceptor('profilePicture') )
-    async updateProfile(@Req() req: Request, @Body() body: { userData: string, personData: string }, @UploadedFile() profilePicture?: Express.Multer.File) {
-        const userData = JSON.parse(body.userData) as unknown as UpdateUserDTO;
-        const personData = JSON.parse(body.personData) as unknown as UpdatePersonDTO;
-        const updated = await this.userService.updateUser(userData, personData, profilePicture);
-
-        return new Response({
-            content: {
-                message: 'Profile updated successfully',
-                data: updated,
-            },
-            status: HttpStatus.OK,
-        })
-    }
-
-    @Post('recover-password')
-    async resetPassword(@Body() body: RecoverPasswordDTO) {
-        const user = await this.userService.findUserByEmailOrUsername(body.email);
-        if(!user) {
-            return new Response({
-                content: {
-                    message: 'User not found',
-                    data: null
-                },
-                status: HttpStatus.NOT_FOUND,
-            })
-        }
-        const resetLink = await this.userService.generateResetPasswordLink(user);
-        await this.authMailerService.resetPassword(body.email, resetLink, body.language)
-
-        return new Response({
-            content: true,
-            status: HttpStatus.OK,
-        })
-    }
-
-    @Post('reset-password')
-    async resetPasswordConfirm(@Body() body: { email:string, token: string, newPassword: string }) {
-        const user = await this.userService.findUserByEmailOrUsername(body.email);
-        if(!user) {
-            return new Response({
-                content: {
-                    message: 'User not found',
-                    data: null
-                },
-                status: HttpStatus.NOT_FOUND,
-            })
-        }
-        const updatedUser = await this.userService.resetPassword(user, body.token, body.newPassword);
-        return new Response({
-            content: {
-                message: 'Password updated successfully',
-                user: updatedUser,
-            },
-            status: HttpStatus.OK,
-        })
-    }
-
-    @Get('profile/confirm')
-    async confirmProfile(@Query('usernameOrEmail') usernameOrEmail: string ) {
-        const user = await this.userService.findUserByEmailOrUsername(usernameOrEmail);
-        if (user) {
-            return new Response({
-                content: {
-                    byUsername: user.username === usernameOrEmail ? true : false,
-                    byEmail: user.email === usernameOrEmail ? true : false,
-                    exists: true,
-                },
-                status: HttpStatus.OK,
-                })
-        }
-
-        return new Response({
-            content: {
-                byUsername: null,
-                byEmail: null,
-                exists: false,
-            },
-            status: HttpStatus.NOT_FOUND,
-        });
-    }
+    return new Response({
+      content: {
+        byUsername: null,
+        byEmail: null,
+        exists: false,
+      },
+      status: HttpStatus.NOT_FOUND,
+    });
+  }
 }

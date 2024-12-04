@@ -15,6 +15,7 @@ import { StorageService } from 'src/global/services/aws/storage/storage.service'
 import { getUTCCurrentDate } from 'src/global/utils/dates';
 import { PersonDTOHelper } from '../../helpers/personDTO.helper';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
+import { SubscriptionService } from 'src/subscription/services/subscription/subscription.service';
 
 @Injectable()
 export class UserService {
@@ -23,6 +24,7 @@ export class UserService {
     private peopleRepository: PeopleRepository,
     private storageService: StorageService,
     private placeSessionService: PlaceSessionService,
+    private subscriptionService: SubscriptionService,
   ) {}
 
   // Person
@@ -55,6 +57,8 @@ export class UserService {
       throw new HttpException('User already exists', 409)
     }
 
+    const userEmailValidated =  await this.validateAndFormatEmailFromUser(userData.email)
+
     const person = await this.registerPerson(personData);
 
     const salt = await genSalt()
@@ -63,8 +67,8 @@ export class UserService {
     const currentDate = getUTCCurrentDate()
 
     const userToCreate: Omit<User, 'id'> = {
-      username: userData.username,
-      email: userData.email,
+      username: this.formatUsernameFromUser(userData.username),
+      email: userEmailValidated,
       password: hashedPassword,
       profilePicture: null,
       personID: person.id,
@@ -80,14 +84,50 @@ export class UserService {
       visitedPlacesIDs: [],
       gamification: {
         points: 0,
-      }
+      },
+      subscription: this.subscriptionService.createDefaultSubscription(),
     };
 
     const user = await this.userRepository.registerUser(userToCreate);
+
     return {
-      user: UserDTOHelper.fromEntityToDTO(user),
+      user: UserDTOHelper.fromEntityToDTO(user, null),
       person,
     };
+  }
+
+
+  private async validateAndFormatEmailFromUser(email: string): Promise<string> {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new HttpException('Invalid email', 400)
+    }
+
+    const emailParts = email.split('@');
+    if (emailParts.length !== 2) {
+      throw new HttpException('Invalid email', 400)
+    }
+
+    const domainParts = emailParts[1].split('.');
+    if (domainParts.length < 2) {
+      throw new HttpException('Invalid email', 400)
+    }
+
+    const domain = domainParts[domainParts.length - 1];
+    if (domain.length < 2) {
+      throw new HttpException('Invalid email', 400)
+    }
+    
+    const alreadyExists = await this.userRepository.findByEmail(email);
+    if (alreadyExists) {
+      throw new HttpException('Email already exists', 409)
+    }
+
+    return email.toLowerCase().trim();
+  }
+
+  private formatUsernameFromUser(username: string): string {
+    return username.toLowerCase().trim();
   }
 
   public async findUserByEmailOrUsername(emailOrUsername: string) {
@@ -97,6 +137,7 @@ export class UserService {
 
     return user;
   }
+
 
   public async updateUser(updateUserDTO: UpdateUserDTO, updatePersonDTO: UpdatePersonDTO, profilePicture?: Express.Multer.File) {
 
