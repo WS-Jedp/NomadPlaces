@@ -13,8 +13,13 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FilesInterceptor,
+} from '@nestjs/platform-express';
+import { SUBSCRIPTION_PLAN_ENUM } from '@prisma/client';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
+import { OptionalAuthGuard } from 'src/auth/guards/optionalJwt';
 import { PlaceMongoEntity } from 'src/global/entities/place';
 import Response from 'src/global/models/response';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
@@ -116,9 +121,20 @@ export class PlacesController {
     });
   }
 
+  @UseGuards(OptionalAuthGuard)
   @Get('all')
-  async getAllWithCachedSession() {
-    const places = await (await this.placesService.getAll()).places;
+  async getAllWithCachedSession(@Req() req) {
+    let withDiscoveredPlaces = false;
+
+    if(req.user) {
+      if(req.user.subscription !== SUBSCRIPTION_PLAN_ENUM.EXPLORER_PLAN) {
+        withDiscoveredPlaces = true;
+      }
+    }
+
+    const places = await (
+      await this.placesService.getAll(withDiscoveredPlaces)
+    ).places;
     const placesWithQuickSessionData = await Promise.all(
       places.map(async (place) => {
         const sessionData = await this.placeSessionService.getSessionCacheData(
@@ -133,7 +149,7 @@ export class PlacesController {
 
     return new Response({
       content: {
-        placesWithQuickSessionData
+        placesWithQuickSessionData,
       },
       status: HttpStatus.OK,
     });
@@ -168,19 +184,27 @@ export class PlacesController {
    * DISCOVERD AND CONFIRMATION ACTIONS
    * All the actions that involve the discovering and confirmations of new places into the app by the community
    */
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Post('discover/new')
-  @UseInterceptors( FilesInterceptor('files', 15), FileSizeValidationPipe)
-  async newSpotDiscovered(@Body() data: { spotDiscovered: string }, @UploadedFiles() multimedia: Express.Multer.File[]) {
-    const discoverdSpotDTO = JSON.parse(data.spotDiscovered) as unknown as DiscoveredSpotDTO;
-    const discoveredPlace = await this.placesService.saveDiscoveredPlace(discoverdSpotDTO, multimedia);
+  @UseInterceptors(FilesInterceptor('files', 15), FileSizeValidationPipe)
+  async newSpotDiscovered(
+    @Body() data: { spotDiscovered: string },
+    @UploadedFiles() multimedia: Express.Multer.File[],
+  ) {
+    const discoverdSpotDTO = JSON.parse(
+      data.spotDiscovered,
+    ) as unknown as DiscoveredSpotDTO;
+    const discoveredPlace = await this.placesService.saveDiscoveredPlace(
+      discoverdSpotDTO,
+      multimedia,
+    );
     return new Response({
       content: discoveredPlace,
       status: HttpStatus.CREATED,
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Post('discover/confirm')
   async confirmSpot(@Request() req, @Body() data: PlaceConfirmationSpotDTO) {
     const authUserID = req.user.id;
@@ -193,10 +217,9 @@ export class PlacesController {
       content: confirmedSpot,
       status: HttpStatus.OK,
     });
-
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Post('discover/reject')
   async rejectSpot(@Request() req, @Body() data: PlaceConfirmationSpotDTO) {
     const authUserID = req.user.id;
@@ -211,7 +234,7 @@ export class PlacesController {
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Get('discover/reviews/:spotID')
   async spotReviews(@Param('spotID') spotID: string) {
     const data = await this.placesService.getAllSpotReviews(spotID);
@@ -223,7 +246,7 @@ export class PlacesController {
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Get('discovered/me')
   async getDiscoveredPlacesByAuthUser(@Request() req) {
     const authUserID = req.user.id;
@@ -233,7 +256,7 @@ export class PlacesController {
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Get('visited/me')
   async getVisitedPlacesByAuthUser(@Request() req) {
     const authUserID = req.user.id;
@@ -243,7 +266,7 @@ export class PlacesController {
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Get('visited/by/:userID')
   async getVisitedPlacesByUser(@Param('userID') userID: string) {
     return new Response({
@@ -252,7 +275,7 @@ export class PlacesController {
     });
   }
 
-  @UseGuards( JwtAuthGuard )
+  @UseGuards(JwtAuthGuard)
   @Get('confirmed/me')
   async getDiscoveredPlacesConfirmByAuthUser(@Request() req) {
     const authUserID = req.user.id;
@@ -263,7 +286,10 @@ export class PlacesController {
   }
 
   @Get('discovered/by/:userID')
-  async getDiscoveredPlacesByUser(@Request() req, @Param('userID') userID: string) {
+  async getDiscoveredPlacesByUser(
+    @Request() req,
+    @Param('userID') userID: string,
+  ) {
     return new Response({
       content: await this.placesService.getDiscoveredPlacesByUser(userID),
       status: HttpStatus.OK,
@@ -271,7 +297,10 @@ export class PlacesController {
   }
 
   @Get('confirmmed/by/:userID')
-  async getDiscoveredPlacesConfirmmedByUser(@Request() req, @Param('userID') userID: string) {
+  async getDiscoveredPlacesConfirmmedByUser(
+    @Request() req,
+    @Param('userID') userID: string,
+  ) {
     return new Response({
       content: await this.placesService.getUserPlacesConfirmed(userID),
       status: HttpStatus.OK,

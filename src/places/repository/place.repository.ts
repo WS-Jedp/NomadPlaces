@@ -35,6 +35,18 @@ export class PlaceRepository {
     return this.prisma.places.findMany();
   }
 
+  getOnlyOfficalPlaces() {
+    return this.prisma.places.findMany({
+      where: {
+        OR: [
+          { discoveredBy: null },
+          { discoveredByID: null },
+          { confirmationStatus: PlaceConfirmationStatus.RECOMMENDED },
+        ],
+      },
+    });
+  }
+
   findOne(
     id: string,
     withSessions = true,

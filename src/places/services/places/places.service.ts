@@ -75,8 +75,15 @@ export class PlacesService {
   }
 
   // Read actions
-  async getAll() {
-    const places = await this.placeRepository.getAll();
+  async getAll(withDiscoveredPlaces = false) {
+    let places;
+
+    if(withDiscoveredPlaces) {
+      places = await this.placeRepository.getAll();
+    } else {
+      places = await this.placeRepository.getOnlyOfficalPlaces()
+    }
+
     return {
       places,
     };

@@ -84,7 +84,7 @@ export class SubscriptionService {
   public async terminateSubscription(id: string) {
     return await this.updateSubscriptionToStatus(
       id,
-      SUBSCRIPTION_STATUS_ENUM.CANCELED,
+      SUBSCRIPTION_STATUS_ENUM.CANCELLED,
     );
   }
 
