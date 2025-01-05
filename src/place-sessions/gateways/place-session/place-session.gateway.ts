@@ -5,7 +5,6 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { PLACE_SESSION_ACTIONS_ENUM } from '@prisma/client';
-import { last } from 'rxjs';
 import { Socket, Server } from 'socket.io';
 import { PlaceSessionActionDataPayload } from 'src/global/models/placeSession/placeSessionActionData.model';
 import { UpdateActionData, UPDATE_ACTIONS } from 'src/global/models/placeSession/updateAction.model';

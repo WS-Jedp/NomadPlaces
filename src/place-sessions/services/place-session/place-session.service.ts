@@ -49,7 +49,7 @@ export class PlaceSessionService {
    */
   public async registerUserActionIntoSession(payload: {
     sessionID: string;
-    placeID: string,
+    placeID: string;
     userID: string;
     username: string;
     actionType: PLACE_SESSION_ACTIONS_ENUM;
@@ -817,7 +817,8 @@ export class PlaceSessionService {
     try {
       await this.cacheManager.set(`place-session-${placeID}`, cachedData);
       const cached = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
-        `place-session-${placeID}`);
+        `place-session-${placeID}`,
+      );
       return cached;
     } catch (error) {
       return false;
@@ -842,8 +843,6 @@ export class PlaceSessionService {
         cachedData[key] = newData[key];
       }
     }
-
-    console.log(cachedData, "UPDATED CACHED DATA")
 
     return await this.setSessionCacheData(placeID, cachedData);
   }
@@ -914,54 +913,60 @@ export class PlaceSessionService {
 
     const toUdpate: Partial<PlaceSessionCachedDataDTO> = {
       lastActions: [...cachedData.lastActions],
-    }
+    };
 
-    if(action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN) {
-      const user = await this.userRepository.findOne(action.userID)
-      cachedData.usersInSession && cachedData.usersInSession.unshift({
-        id: user.id,
-        username: user.username,
-        profilePicture: user.profilePicture,
-        email: user.email,
-      })
+    if (action.type === PLACE_SESSION_ACTIONS_ENUM.JOIN) {
+      const user = await this.userRepository.findOne(action.userID);
+      cachedData.usersInSession &&
+        cachedData.usersInSession.unshift({
+          id: user.id,
+          username: user.username,
+          profilePicture: user.profilePicture,
+          email: user.email,
+        });
       toUdpate.usersInSession = [...cachedData.usersInSession];
     }
 
-    if(action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE) {
-      cachedData.usersInSession = cachedData.usersInSession.filter(u => u.id !== action.userID)
+    if (action.type === PLACE_SESSION_ACTIONS_ENUM.LEAVE) {
+      cachedData.usersInSession = cachedData.usersInSession.filter(
+        (u) => u.id !== action.userID,
+      );
       toUdpate.usersInSession = [...cachedData.usersInSession];
     }
 
-    if(action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE) {
-
-      const actionPayload = JSON.parse(action.payload.toString())
-        if(actionPayload.type === UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE) {
-          const amountOfPeople = actionPayload.data.data.amount
-          const amountOfPeopleAction = cachedData.amountOfPeople.find(a => a.amount == amountOfPeople)
-          if(amountOfPeopleAction) {
-            amountOfPeopleAction.actions.unshift(action)
-          } else {
-            cachedData.amountOfPeople.push({
-              amount: amountOfPeople,
-              actions: [action]
-            })
-          }
-          toUdpate.amountOfPeople = [...cachedData.amountOfPeople]
+    if (action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE) {
+      const actionPayload = JSON.parse(action.payload.toString());
+      if (actionPayload.type === UPDATE_ACTIONS.PLACE_AMOUNT_OF_PEOPLE) {
+        const amountOfPeople = actionPayload.data.data.amount;
+        const amountOfPeopleAction = cachedData.amountOfPeople.find(
+          (a) => a.amount == amountOfPeople,
+        );
+        if (amountOfPeopleAction) {
+          amountOfPeopleAction.actions.unshift(action);
+        } else {
+          cachedData.amountOfPeople.push({
+            amount: amountOfPeople,
+            actions: [action],
+          });
         }
+        toUdpate.amountOfPeople = [...cachedData.amountOfPeople];
+      }
 
-        if(actionPayload.type === UPDATE_ACTIONS.PLACE_MINDSET) {
-          const mindset = actionPayload.data.data
-          const mindsetAction = cachedData.bestMindsetTo.find(a => a.mindset === mindset)
-          if(mindsetAction) {
-            mindsetAction.actions.unshift(action)
-          } else {
-            cachedData.bestMindsetTo.push({
-              mindset,
-              actions: [action]
-            })
-          }
-          toUdpate.bestMindsetTo = [...cachedData.bestMindsetTo]
+      if (actionPayload.type === UPDATE_ACTIONS.PLACE_MINDSET) {
+        const mindset = actionPayload.data.data;
+        const mindsetAction = cachedData.bestMindsetTo.find(
+          (a) => a.mindset === mindset,
+        );
+        if (mindsetAction) {
+          mindsetAction.actions.unshift(action);
+        } else {
+          cachedData.bestMindsetTo.push({
+            mindset,
+            actions: [action],
+          });
         }
+        toUdpate.bestMindsetTo = [...cachedData.bestMindsetTo];
+      }
     }
     await this.updateSessionCacheData(placeID, toUdpate);
     return cachedData.lastActions;
@@ -1046,7 +1051,7 @@ export class PlaceSessionService {
     const placeSessionDTO = new CreatePlaceSessionDTO({
       createDate: startDateOfSession,
       endDate: sessionEndDate,
-      placeID
+      placeID,
     });
 
     const placeSessionEntity = await this.placeSessionRepository.create(

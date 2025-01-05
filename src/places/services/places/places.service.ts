@@ -1,13 +1,19 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import {
+  AMBIENCE_TAG_ENUM,
   Commodities,
   DiscoveredPlaceConfirmation,
+  LANGUAGE_ENUM,
   MULTIMEDIA_TYPE_ENUM,
+  PLACE_APPROXIMATE_DAILY_CONST_ENUM,
   PlaceConfirmationStatus,
   PlaceRules,
   Places,
   PlaceTypes,
+  PRIVACY_POLICY_RULE_ENUM,
+  THEME_TAG_ENUM,
 } from '@prisma/client';
+import { isArray } from 'class-validator';
 import { UserRepository } from 'src/auth/repositories/user';
 import { GamificationService } from 'src/gamification/services/gamification/gamification.service';
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
@@ -78,10 +84,10 @@ export class PlacesService {
   async getAll(withDiscoveredPlaces = false) {
     let places;
 
-    if(withDiscoveredPlaces) {
+    if (withDiscoveredPlaces) {
       places = await this.placeRepository.getAll();
     } else {
-      places = await this.placeRepository.getOnlyOfficalPlaces()
+      places = await this.placeRepository.getOnlyOfficalPlaces();
     }
 
     return {
@@ -148,6 +154,10 @@ export class PlacesService {
       approvedDate: null,
       confirmedByIDs: [],
       rejectedDate: null,
+      ambianceTags: spotDiscovered.ambienceTags,
+      themeTags: spotDiscovered.themeTags,
+      approximateDailyCost: spotDiscovered.approximateDailyCost,
+      languages: spotDiscovered.languages,
     });
 
     // Relate the multimedia to the place
@@ -263,6 +273,10 @@ export class PlacesService {
       type: placeReview.type,
       location: placeReview.location,
       confirmationStatus: PlaceConfirmationStatus.APPROVED,
+      ambianceTags: placeReview.ambienceTags,
+      themeTags: placeReview.themeTags,
+      approximateDailyCost: placeReview.approximateDailyCost,
+      languages: placeReview.languages,
     });
 
     const userUpdated = await this.userRepository.addConfirmationPlace(
@@ -406,6 +420,10 @@ export class PlacesService {
       type: placeReview.type,
       location: placeReview.location,
       confirmationStatus: PlaceConfirmationStatus.REJECTED,
+      ambianceTags: placeReview.ambienceTags,
+      themeTags: placeReview.themeTags,
+      approximateDailyCost: placeReview.approximateDailyCost,
+      languages: placeReview.languages,
     });
 
     if (
@@ -476,10 +494,12 @@ export class PlacesService {
       throw new HttpException('User not found', 404);
     }
 
-    const userVisitedPlaces = await this.placeRepository.getUserPlacesVisited(userID)
+    const userVisitedPlaces = await this.placeRepository.getUserPlacesVisited(
+      userID,
+    );
 
     return {
-      visitedPlaces: userVisitedPlaces.visitedPlaces
+      visitedPlaces: userVisitedPlaces.visitedPlaces,
     };
   }
 
@@ -550,12 +570,30 @@ export class PlacesService {
       (a, b) => countKnownForOptions[b] - countKnownForOptions[a],
     )[0];
 
+    const countApproxDailyCost = confirmations
+      .map((place) => place.approximateDailyCost)
+      .reduce((acc, approxCost) => {
+        acc[approxCost] = acc[approxCost] ? acc[approxCost] + 1 : 1;
+        return acc;
+      }, {});
+    const approxDailyCostSelected = Object.keys(countApproxDailyCost).sort(
+      (a, b) => countApproxDailyCost[b] - countApproxDailyCost[a],
+    )[0] as PLACE_APPROXIMATE_DAILY_CONST_ENUM;
+
+    const mostCommonAmbianceTags =
+      this.findMostCommonAmbianceTags(confirmations);
+    const mostCommonlanguages = this.findMostCommonLanguages(confirmations);
+    const mostCommonThemeTags = this.findMostCommonThemeTags(confirmations);
     const commoditiesSelected = this.findMostCommonCommodities(confirmations);
     const spotRulesSelected = this.findMostCommonRules(confirmations);
 
     return {
       name: nameSelected,
       description: descriptionSelected,
+      ambienceTags: mostCommonAmbianceTags,
+      themeTags: mostCommonThemeTags,
+      approximateDailyCost: approxDailyCostSelected,
+      languages: mostCommonlanguages,
       location: {
         zone: zoneSelected,
         city: citySelected,
@@ -567,11 +605,7 @@ export class PlacesService {
       knownFor: knownForSelected,
       commodities: {
         ...commoditiesSelected,
-        wifiSpeed:
-          isNaN(commoditiesSelected.wifiSpeed) ||
-          commoditiesSelected.wifiSpeed === undefined
-            ? null
-            : commoditiesSelected.wifiSpeed,
+        wifiSpeed: commoditiesSelected.wifiSpeed,
         plugsAmount:
           isNaN(commoditiesSelected.plugsAmount) ||
           commoditiesSelected.plugsAmount === undefined
@@ -595,11 +629,24 @@ export class PlacesService {
     // Count occurrences of each value for each property
     confirmations.forEach((confirmation) => {
       for (const property in confirmation.commodities) {
-        const value = confirmation.commodities[property];
-        if (counts[property][value] === undefined) {
-          counts[property][value] = 1;
+        if (['food', 'temperatureControl'].includes(property)) {
+          const arrayValue = confirmation.commodities[property];
+          if (isArray(arrayValue) && arrayValue.length > 0) {
+            arrayValue.forEach((option) => {
+              if (counts[property][option] === undefined) {
+                counts[property][option] = 1;
+              } else {
+                counts[property][option]++;
+              }
+            });
+          }
         } else {
-          counts[property][value]++;
+          const value = confirmation.commodities[property];
+          if (counts[property][value] === undefined) {
+            counts[property][value] = 1;
+          } else {
+            counts[property][value]++;
+          }
         }
       }
     });
@@ -620,13 +667,63 @@ export class PlacesService {
       // Convert property back to correct type
       if (typeof confirmations[0].commodities[property] === 'boolean') {
         mostCommonCommodities[property] = mostCommonValue === 'true';
+      } else if (['food', 'temperatureControl'].includes(property)) {
+        const valuesWithVote = Object.keys(counts[property]);
+        const mostCommonValuesAgreed = valuesWithVote.filter(
+          (value) => counts[property][value] > 1,
+        );
+        mostCommonCommodities[property] = mostCommonValuesAgreed;
       } else {
         mostCommonCommodities[property] = mostCommonValue
-          ? Number(mostCommonValue)
+          ? mostCommonValue
           : null || null;
       }
     }
     return mostCommonCommodities;
+  }
+
+  private findMostCommonLanguages(
+    confirmations: DiscoveredPlaceConfirmation[],
+  ) {
+    const counts: { [key: string]: number } = {};
+    confirmations.forEach((spot) => {
+      for (const language in spot.languages) {
+        counts[language] = counts[language] + 1;
+      }
+    });
+
+    return Object.keys(counts)
+      .filter((count) => counts[count] > 1)
+      .map((count) => count) as LANGUAGE_ENUM[];
+  }
+
+  private findMostCommonAmbianceTags(
+    confirmations: DiscoveredPlaceConfirmation[],
+  ): AMBIENCE_TAG_ENUM[] {
+    const counts: { [key: string]: number } = {};
+    confirmations.forEach((spot) => {
+      for (const ambianceTag in spot.ambianceTags) {
+        counts[ambianceTag] = counts[ambianceTag] + 1;
+      }
+    });
+
+    return Object.keys(counts)
+      .filter((count) => counts[count] > 1)
+      .map((count) => count) as AMBIENCE_TAG_ENUM[];
+  }
+  private findMostCommonThemeTags(
+    confirmations: DiscoveredPlaceConfirmation[],
+  ): THEME_TAG_ENUM[] {
+    const counts: { [key: string]: number } = {};
+    confirmations.forEach((spot) => {
+      for (const themeTag in spot.themeTags) {
+        counts[themeTag] = counts[themeTag] + 1;
+      }
+    });
+
+    return Object.keys(counts)
+      .filter((count) => counts[count] > 1)
+      .map((count) => count) as THEME_TAG_ENUM[];
   }
 
   private findMostCommonRules(
@@ -642,13 +739,26 @@ export class PlacesService {
     // Count occurrences of each value for each property
     places.forEach((place) => {
       for (const property in place.rules) {
-        const value = place.rules[property];
-        if (value !== undefined) {
-          // Ensure we only count defined values
-          if (counts[property][value] === undefined) {
-            counts[property][value] = 1;
-          } else {
-            counts[property][value]++;
+        if (['privacyPolicy'].includes(property)) {
+          const arrayValue = place.rules[property];
+          if (isArray(arrayValue) && arrayValue.length > 0) {
+            arrayValue.forEach((option) => {
+              if (counts[property][option] === undefined) {
+                counts[property][option] = 1;
+              } else {
+                counts[property][option]++;
+              }
+            });
+          }
+        } else {
+          const value = place.rules[property];
+          if (value !== undefined) {
+            // Ensure we only count defined values
+            if (counts[property][value] === undefined) {
+              counts[property][value] = 1;
+            } else {
+              counts[property][value]++;
+            }
           }
         }
       }
@@ -667,9 +777,15 @@ export class PlacesService {
         }
       }
 
-      // Convert property back to correct type if necessary
+      // Convert property back to correct type if necessary (Only use when it's Boolean type in Schema)
       if (['petFriendly', 'smoking', 'underAge'].includes(property)) {
         mostCommonRules[property] = mostCommonValue === 'true';
+      } else if (['privacyPolicy'].includes(property)) {
+        const valuesWithVote = Object.keys(counts[property]);
+        const mostCommonValuesAgreed = valuesWithVote.filter(
+          (value) => counts[property][value] > 1,
+        );
+        mostCommonRules[property] = mostCommonValuesAgreed;
       } else {
         mostCommonRules[property] = mostCommonValue; // for strings no conversion is needed
       }

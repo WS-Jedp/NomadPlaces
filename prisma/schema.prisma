@@ -116,7 +116,7 @@ model User {
   createdDate DateTime
 
   // Subscription data
-  subscription   Subscription
+  subscription Subscription
 }
 
 type UserGamification {
@@ -144,11 +144,78 @@ enum PlaceConfirmationStatus {
   REJECTED
 }
 
+enum AMBIENCE_TAG_ENUM {
+  ELEGANT
+  CREATIVE
+  CASUAL
+  COZY
+  QUIET
+  PROFESSIONAL
+  RUSTIC
+  MINIMALIST
+  INDUSTRIAL
+  NATURE_INSPIRED
+  CHIC
+  RETRO
+  CULTURAL
+  SOPHISTICATED
+  TECHNOLOGICAL
+  BOHEMIAN
+  ZEN
+  TRENDY
+  VIBRANT
+  ASIAN
+  COLLABORATIVE
+}
+
+enum THEME_TAG_ENUM {
+  STARTUPS
+  LIBRARY_INSPIRED
+  FOCUS_ZONE
+  TECH_DRIVEN
+
+  CREATIVE_STUDIO
+  ART_AND_DESIGN
+  NOMAD_MEETUPS
+  CULTURAL_EXCHANGE
+  BLOCKCHAIN_AND_WEB3
+
+  HEALTH_AND_WELLNESS
+  ECO_FRIENDLY
+  COFFEE_CULTURE
+  LUXURY_AND_COMFORT
+
+  EVENT_DRIVEN
+  TRAVEL_FOCUSED
+  NIGTH_OWL
+
+  FOODIE_PARADISE
+  CHILL_ZONES
+}
+
+enum PLACE_APPROXIMATE_DAILY_CONST_ENUM {
+  FREE
+  LOW
+  MODERATE
+  HIGH
+}
+
+enum LANGUAGE_ENUM {
+  SPANISH
+  ENGLISH
+  FRENCH
+}
+
 model Places {
   id          String  @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   knownFor    String?
   description String?
+
+  languages            LANGUAGE_ENUM[]
+  ambianceTags         AMBIENCE_TAG_ENUM[]
+  themeTags            THEME_TAG_ENUM[]
+  approximateDailyCost PLACE_APPROXIMATE_DAILY_CONST_ENUM?
 
   discoveredBy   User?    @relation(name: "PlaceDiscoveredBy", fields: [discoveredByID], references: [id])
   discoveredByID String?  @db.ObjectId
@@ -173,43 +240,165 @@ model Places {
 }
 
 model DiscoveredPlaceConfirmation {
-  id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
-  placeID            String                  @db.ObjectId
-  confirmedByID      String                  @db.ObjectId
-  name               String
-  knownFor           String?
-  description        String?
-  confirmationStatus PlaceConfirmationStatus
-  multimedia         Multimedia[]
-  type               PlaceTypes[]
-  location           Location
-  commodities        Commodities
-  rules              PlaceRules
+  id                   String                              @id @default(auto()) @map("_id") @db.ObjectId
+  placeID              String                              @db.ObjectId
+  confirmedByID        String                              @db.ObjectId
+  name                 String
+  knownFor             String?
+  description          String?
+  confirmationStatus   PlaceConfirmationStatus
+  multimedia           Multimedia[]
+  type                 PlaceTypes[]
+  location             Location
+  commodities          Commodities
+  rules                PlaceRules
+  languages            LANGUAGE_ENUM[]
+  ambianceTags         AMBIENCE_TAG_ENUM[]
+  themeTags            THEME_TAG_ENUM[]
+  approximateDailyCost PLACE_APPROXIMATE_DAILY_CONST_ENUM?
 }
+
+// ========================================
+// ========================================
+// Commodities
+// ========================================
+// ========================================
+
+// ========================================
+// Enums
+enum WIFI_SPEED_COMMODITY_ENUM {
+  SLOW
+  MODERATE
+  FAST
+}
+
+enum PARKING_COMMODITY_ENUM {
+  IN_PLACE
+  IN_STREET
+  NEARBY
+}
+
+enum MOBILE_SIGNAL_COMMODITY_ENUM {
+  WEAK
+  MEDIUM
+  STRONG
+}
+
+enum FOOD_COMMODITY_ENUM {
+  FAST_FOOD
+  RESTAURANT
+  VEGAN
+  VEGETARIAN
+  CARNIVORE
+  ALL
+}
+
+enum COMMODITY_QUALITY {
+  VERY_BAD
+  BAD
+  REGULAR
+  GOOD
+  VERY_GOOD
+  EXCELLENT
+}
+
+enum COMFORT_LEVEL_COMMODITY_ENUM {
+  BASIC
+  CASUAL
+  COZY
+  ERGONOMIC
+  LUXURIOUS
+  SPACIOUS
+}
+
+enum TEMPERATURE_CONTROL_COMMODITY_ENUM {
+  AIR_CONDITIONING
+  HEATING
+}
+
+// ========================================
+// Schema
 
 type Commodities {
-  publicWifi      Boolean?
-  wifiSpeed       Int?
-  parking         Boolean?
-  publicPlugs     Boolean?
-  plugsAmount     Int?
-  coworkSpace     Boolean?
-  publicBathrooms Boolean?
+  publicWifi          Boolean?
+  wifiSpeed           WIFI_SPEED_COMMODITY_ENUM?
+  parking             PARKING_COMMODITY_ENUM?
+  publicPlugs         Boolean?
+  plugsAmount         Int?
+  coworkSpace         Boolean?
+  publicBathrooms     Boolean?
+  mobileSignal        MOBILE_SIGNAL_COMMODITY_ENUM?
+  food                FOOD_COMMODITY_ENUM[]
+  foodQuality         COMMODITY_QUALITY?
+  comfortLevel        COMFORT_LEVEL_COMMODITY_ENUM?
+  outdoorSeating      Boolean?
+  temperatureControl  TEMPERATURE_CONTROL_COMMODITY_ENUM[]
+  accessibility       Boolean?
+  eventSpace          Boolean?
+  greenAreas          Boolean?
+  alcoholAvailability Boolean?
+  cafe                Boolean?
+  cafeQuality         COMMODITY_QUALITY?
+  bakery              Boolean?
+  bakeryQuality       COMMODITY_QUALITY?
 }
 
+// ========================================
+// ========================================
+// Rules
+// ========================================
+// ========================================
+
+// ========================================
+// Enums
+
+enum NOISE_POLICY_RULE_ENUM {
+  QUIET_ONLY
+  MODERATE_NOISE_ALLOWED
+  NO_NOISE_RESTRICTION
+}
+
+enum TIME_LIMIT_RULE_ENUM {
+  NO_LIMIT
+  UNLIMITED
+  PER_HOUR
+}
+
+enum CONSUMPTION_POLICY_RULE_ENUM {
+  PURCHASE_REQUIRED
+  OUTSIDE_PURCHASE_ALLOWED
+  NO_OUTSIDE_FOOD
+}
+
+enum PRIVACY_POLICY_RULE_ENUM {
+  OPEN_WORKSPACE
+  SHARED_DESKS
+  PRIVATE_ROOM
+  OUTSIDE_PURCHASE_ALLOWED
+  NO_OUTSIDE_FOOD
+}
+
+// ========================================
+// Schema
 type PlaceRules {
-  openAt      String
-  closedAt    String
-  petFriendly Boolean?
-  smoking     Boolean?
-  underAge    Boolean?
+  openAt            String
+  closedAt          String
+  petFriendly       Boolean?
+  smoking           Boolean?
+  underAge          Boolean?
+  timeLimit         TIME_LIMIT_RULE_ENUM?
+  noisePolicy       NOISE_POLICY_RULE_ENUM?
+  consumptionPolicy CONSUMPTION_POLICY_RULE_ENUM?
+  privacyPolicy     PRIVACY_POLICY_RULE_ENUM[]
 }
 
 enum PlaceTypes {
   LIBRARY
   COFFEE
-  NIGHTCLUB
-  BAR
+  ROOFTOP
+  COWORK_ZONE
+  PARK
+  LOOKOUT
 }
 
 type Location {

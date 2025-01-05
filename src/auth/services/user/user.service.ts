@@ -316,7 +316,8 @@ export class UserService {
     }
 
     const currentDate = getUTCCurrentDate()
-    const isSessionExpired = lastSession && lastSession.endDate && lastSession.endDate < currentDate
+    console.log(typeof lastSession.endDate)
+    const isSessionExpired = lastSession ? lastSession.endDate ? lastSession.endDate < currentDate : false : false
     const isUserInSession = await this.placeSessionService.isUserInSessionByActions(lastSession.id, user.id)
 
     return {
