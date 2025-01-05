@@ -14,19 +14,16 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  FileFieldsInterceptor,
   FilesInterceptor,
 } from '@nestjs/platform-express';
 import { SUBSCRIPTION_PLAN_ENUM } from '@prisma/client';
 import { JwtAuthGuard } from 'src/auth/guards/jwt';
 import { OptionalAuthGuard } from 'src/auth/guards/optionalJwt';
-import { PlaceMongoEntity } from 'src/global/entities/place';
 import Response from 'src/global/models/response';
 import { PlaceSessionService } from 'src/place-sessions/services/place-session/place-session.service';
 import { CreatePlaceDTO } from 'src/places/dto/CreatePlace.dto';
 import { DiscoveredSpotDTO } from 'src/places/dto/DiscoveredSpot.dto';
 import { PlaceConfirmationSpotDTO } from 'src/places/dto/PlaceConfirmation.dto';
-import { PlaceEntityHelper } from 'src/places/helpers/PlaceHelper.dto';
 import { FileSizeValidationPipe } from 'src/places/pipes/file-size-validation/file-size-validation.pipe';
 import { PlacesService } from 'src/places/services/places/places.service';
 @Controller('places')
