@@ -44,6 +44,15 @@ export class PlaceRepository {
           { confirmationStatus: PlaceConfirmationStatus.RECOMMENDED },
         ],
       },
+      include: {
+        discoveredBy: {
+          select: {
+            id: true,
+            username: true,
+            profilePicture: true
+          }
+        },
+      }
     });
   }
 
