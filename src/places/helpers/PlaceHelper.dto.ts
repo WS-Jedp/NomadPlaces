@@ -19,13 +19,13 @@ class PlaceEntityHelper {
             multimedia: mongoEntity.multimedia,
             rules: mongoEntity.rules,
             type: mongoEntity.type,
-            approvedDate: mongoEntity.approvedDate,
+            approvedDate: mongoEntity.approvedDate?.$date || null,
             confirmationStatus: mongoEntity.confirmationStatus,
-            confirmedByIDs: mongoEntity.confirmedByIDs,
-            discoveredByID: mongoEntity.discoveredByID,
-            visitedByIDs: [],
-            discoveredDate: mongoEntity.discoveredDate,
-            rejectedDate: mongoEntity.rejectedDate
+            confirmedByIDs: mongoEntity.confirmedByIDs?.map(id => id.$oid) || [],
+            discoveredByID: mongoEntity.discoveredByID?.$oid || null,
+            visitedByIDs: mongoEntity.visitedByIDs?.map(id => id.$oid) || null,
+            discoveredDate: mongoEntity.discoveredDate?.$date || null,
+            rejectedDate: mongoEntity.rejectedDate?.$date || null
         }
     }
 }

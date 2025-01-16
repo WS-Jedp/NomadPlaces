@@ -783,6 +783,7 @@ export class PlaceSessionService {
     let cachedData = await this.cacheManager.get<PlaceSessionCachedDataDTO>(
       `place-session-${placeID}`,
     );
+
     if (!cachedData) {
       const currentUTCDate = getUTCCurrentDate();
       const session = await this.getPlaceCurrentSession(
@@ -791,6 +792,23 @@ export class PlaceSessionService {
       );
       cachedData = await this.getPlaceSessionCachedData(session);
       this.setSessionCacheData(placeID, cachedData);
+    }
+
+    // Validate if the cached data is from the current day
+    if (cachedData && cachedData.sessionID) {
+      const lastCachedData = await this.placeSessionRepository.find(
+        cachedData.sessionID,
+      );
+
+      if (lastCachedData.endDate < getUTCCurrentDate()) {
+        await this.cacheManager.del(`place-session-${placeID}`);
+        const session = await this.handleCreateDefaultNewSession(
+          cachedData.placeID,
+          getUTCCurrentDate(),
+          this.getSessionEndDate(getUTCCurrentDate()),
+        );
+        cachedData = await this.getPlaceSessionCachedData(session);
+      }
     }
 
     if (

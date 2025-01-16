@@ -106,17 +106,72 @@ export class PlacesService {
     maxDistance: number,
     minDistance: number,
     currentLocation: Coordinates,
+    withCommunityPlaces: boolean = false,
   ) {
     if (!maxDistance) maxDistance = 500;
-    if (!minDistance) maxDistance = 0;
+    if (!minDistance) minDistance = 0;
 
-    const nearestPlaces = await this.placeRepository.findNearestToLocation(
+    if (!withCommunityPlaces) {
+      const nearestPlaces =
+        await this.placeRepository.findOfficialNearestToLocation(
+          maxDistance,
+          minDistance,
+          currentLocation,
+        );
+      const placesWithDiscoveredByUsers = await Promise.all(
+        nearestPlaces.map(async (place) => {
+          if (!place.discoveredByID?.$oid) return place;
+
+          const discoveredByUser = await this.userRepository.findOne(
+            place.discoveredByID.$oid
+          );
+
+          if(discoveredByUser) return place;
+          return {
+            ...place,
+            discoveredBy: {
+              id: discoveredByUser.id,
+              username: discoveredByUser.username,
+              profilePicture: discoveredByUser.profilePicture,
+            },
+          };
+        }),
+      );
+      return {
+        places: placesWithDiscoveredByUsers.map((place) =>
+          PlaceEntityHelper.MongoEntityToDTO(place),
+        ),
+      };
+    }
+
+    const nearestPlaces = await this.placeRepository.findAllNearestToLocation(
       maxDistance,
       minDistance,
       currentLocation,
     );
+
+    const placesWithDiscoveredByUsers = await Promise.all(
+      nearestPlaces.map(async (place) => {
+        if (!place.discoveredByID?.$oid) return place;
+
+        const discoveredByUser = await this.userRepository.findOne(
+          place.discoveredByID.$oid,
+        );
+
+        if(!discoveredByUser) return place;
+        
+        return {
+          ...place,
+          discoveredBy: {
+            id: discoveredByUser.id,
+            username: discoveredByUser.username,
+            profilePicture: discoveredByUser.profilePicture,
+          },
+        };
+      }),
+    );
     return {
-      places: nearestPlaces.map((place) =>
+      places: placesWithDiscoveredByUsers.map((place) =>
         PlaceEntityHelper.MongoEntityToDTO(place),
       ),
     };

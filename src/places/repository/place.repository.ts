@@ -49,10 +49,10 @@ export class PlaceRepository {
           select: {
             id: true,
             username: true,
-            profilePicture: true
-          }
+            profilePicture: true,
+          },
         },
-      }
+      },
     });
   }
 
@@ -74,7 +74,7 @@ export class PlaceRepository {
     });
   }
 
-  findNearestToLocation(
+  findAllNearestToLocation(
     maxDistance: number,
     minDistance: number,
     currentLocation: Coordinates,
@@ -94,6 +94,33 @@ export class PlaceRepository {
             $minDistance: Number(minDistance), // In meters
           },
         },
+      },
+    }) as any as Array<PlaceMongoEntity>;
+  }
+
+  findOfficialNearestToLocation(
+    maxDistance: number,
+    minDistance: number,
+    currentLocation: Coordinates,
+  ): Array<PlaceMongoEntity> {
+    return this.prisma.places.findRaw({
+      filter: {
+        location: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [
+                Number(currentLocation.latitude),
+                Number(currentLocation.longitude),
+              ],
+            },
+            $maxDistance: Number(maxDistance), // In meters
+            $minDistance: Number(minDistance), // In meters
+          },
+        },
+        discoveredByID: {
+          $eq: null,
+        }
       },
     }) as any as Array<PlaceMongoEntity>;
   }

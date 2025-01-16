@@ -54,8 +54,10 @@ export class PlacesController {
    * All the actions that involve the action of reading
    */
 
+  @UseGuards(OptionalAuthGuard)
   @Get('near')
   async getNearToMe(
+    @Req() req,
     @Query()
     searchData: {
       latitude: number;
@@ -64,19 +66,31 @@ export class PlacesController {
       minDistance?: number;
     },
   ) {
+    let withCommunityPlaces = false;
+
+    if(req.user) {
+      if(req.user.subscription !== SUBSCRIPTION_PLAN_ENUM.EXPLORER_PLAN) {
+        withCommunityPlaces = true;
+      }
+    }
+
     const {
       latitude,
       longitude,
       maxDistance = 500,
-      minDistance = 10,
+      minDistance = 0,
     } = searchData;
+
+
     const places = await (
       await this.placesService.getNearestPlacesToLocation(
         maxDistance,
         minDistance,
         { latitude, longitude },
+        withCommunityPlaces
       )
     ).places;
+    
     const placesWithQuickSessionData = await Promise.all(
       places.map(async (place) => {
         const sessionData = await this.placeSessionService.getSessionCacheData(
