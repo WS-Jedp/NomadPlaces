@@ -123,10 +123,10 @@ export class PlacesService {
           if (!place.discoveredByID?.$oid) return place;
 
           const discoveredByUser = await this.userRepository.findOne(
-            place.discoveredByID.$oid
+            place.discoveredByID.$oid,
           );
 
-          if(discoveredByUser) return place;
+          if (discoveredByUser) return place;
           return {
             ...place,
             discoveredBy: {
@@ -158,8 +158,8 @@ export class PlacesService {
           place.discoveredByID.$oid,
         );
 
-        if(!discoveredByUser) return place;
-        
+        if (!discoveredByUser) return place;
+
         return {
           ...place,
           discoveredBy: {
@@ -323,6 +323,7 @@ export class PlacesService {
       confirmedByID: confirmedBy,
       commodities: placeReview.commodities,
       description: placeReview.description,
+      capacity: placeReview.capacity,
       knownFor: placeReview.knownFor,
       rules: placeReview.rules,
       multimedia: placeReview.multimedia,
@@ -470,6 +471,7 @@ export class PlacesService {
       confirmedByID: rejectedBy,
       commodities: placeReview.commodities,
       description: placeReview.description,
+      capacity: placeReview.capacity,
       knownFor: placeReview.knownFor,
       rules: placeReview.rules,
       multimedia: placeReview.multimedia,

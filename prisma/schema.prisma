@@ -194,7 +194,6 @@ enum THEME_TAG_ENUM {
 }
 
 enum PLACE_APPROXIMATE_DAILY_CONST_ENUM {
-  
   CHEAP
   MODERATE
   EXPENSIVE
@@ -246,6 +245,7 @@ model DiscoveredPlaceConfirmation {
   placeID              String                              @db.ObjectId
   confirmedByID        String                              @db.ObjectId
   name                 String
+  capacity             Int?
   knownFor             String?
   description          String?
   confirmationStatus   PlaceConfirmationStatus

@@ -31,6 +31,7 @@ type PlaceMongoEntity = {
   rejectedDate?: { $date: Date };
   approvedDate?: { $date: Date };
   discoveredByID?: { $oid: string };
+  discoveredBy?: { id: string, username: string, profilePicture?: string };
   confirmedByIDs?: { $oid: string }[];
   visitedByIDs?: { $oid: string }[];
   location: {
