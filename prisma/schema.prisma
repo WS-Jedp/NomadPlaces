@@ -213,6 +213,7 @@ model Places {
   knownFor    String?
   description String?
 
+  capacity             Int?
   languages            LANGUAGE_ENUM[]
   ambianceTags         AMBIENCE_TAG_ENUM[]
   themeTags            THEME_TAG_ENUM[]

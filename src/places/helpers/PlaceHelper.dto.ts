@@ -8,6 +8,7 @@ class PlaceEntityHelper {
         return {
             id: mongoEntity._id.$oid,
             name: mongoEntity.name,
+            capacity: mongoEntity.capacity,
             knownFor: mongoEntity.knownFor,
             description: mongoEntity.description,
             languages: mongoEntity.languages,

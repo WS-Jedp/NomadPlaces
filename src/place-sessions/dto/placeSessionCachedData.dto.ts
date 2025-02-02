@@ -1,6 +1,7 @@
 import { PlaceSessionActions, User } from '@prisma/client';
 import { IsArray, IsDate, IsMongoId, IsNotEmpty, IsNumber, IsObject, IsString } from 'class-validator';
 import { PLACE_MINDSET_ENUM } from 'src/global/models/mindset/mindset.model';
+import { PLACE_NOISE_LEVEL } from 'src/global/models/noiseLevel/noiseLevel';
 import { PlaceRecentActivity } from 'src/global/models/recentActivity';
 
 class PlaceSessionCachedDataDTO {
@@ -25,6 +26,12 @@ class PlaceSessionCachedDataDTO {
   @IsObject()
   bestMindsetTo: {
     mindset: PLACE_MINDSET_ENUM
+    actions: PlaceSessionActions[]
+  }[];
+
+  @IsObject()
+  noiseLevel: {
+    noiseLevel: PLACE_NOISE_LEVEL
     actions: PlaceSessionActions[]
   }[];
 

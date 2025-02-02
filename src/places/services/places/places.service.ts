@@ -196,6 +196,7 @@ export class PlacesService {
     const discoveredPlace = await this.placeRepository.addDiscoveredPlace({
       name: spotDiscovered.name,
       knownFor: spotDiscovered.knownFor,
+      capacity: spotDiscovered.capacity,
       description: spotDiscovered.description,
       location: spotDiscovered.location,
       commodities: spotDiscovered.commodities,

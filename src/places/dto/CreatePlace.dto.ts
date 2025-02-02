@@ -1,5 +1,5 @@
 import { PlaceTypes, Location, Commodities, PlaceRules, Multimedia, AMBIENCE_TAG_ENUM, THEME_TAG_ENUM, LANGUAGE_ENUM, PLACE_APPROXIMATE_DAILY_CONST_ENUM } from '@prisma/client'
-import { IsArray, IsNotEmpty, IsObject, IsOptional, IsString,  } from 'class-validator'
+import { IsArray, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString,  } from 'class-validator'
 class CreatePlaceDTO {
     @IsString()
     @IsNotEmpty()
@@ -11,6 +11,10 @@ class CreatePlaceDTO {
     @IsOptional()
     @IsString()
     readonly knownFor?: string
+    
+    @IsOptional()
+    @IsNumber()
+    readonly capacity?: number
 
     @IsArray()
     readonly multimedia: Multimedia[]

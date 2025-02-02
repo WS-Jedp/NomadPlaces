@@ -1,0 +1,7 @@
+export enum PLACE_NOISE_LEVEL {
+    VERY_QUIET = "VERY_QUIET",
+    QUITE = "QUITE",
+    MODERATE = "MODERATE",
+    LOUD = "LOUD",
+    VERY_LOUD = "VERY_LOUD",
+}

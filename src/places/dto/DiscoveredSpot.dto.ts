@@ -1,5 +1,5 @@
 import { PlaceTypes, Location, Commodities, PlaceRules, Multimedia, AMBIENCE_TAG_ENUM, THEME_TAG_ENUM, LANGUAGE_ENUM, PLACE_APPROXIMATE_DAILY_CONST_ENUM } from '@prisma/client'
-import { isArray, IsArray, IsMongoId, IsNotEmpty, IsNotEmptyObject, IsObject, IsOptional, IsString,  } from 'class-validator'
+import { isArray, IsArray, IsMongoId, IsNotEmpty, IsNotEmptyObject, IsNumber, IsObject, IsOptional, IsString,  } from 'class-validator'
 
 class DiscoveredSpotDTO {
     @IsString()
@@ -11,6 +11,10 @@ class DiscoveredSpotDTO {
 
     @IsString()
     readonly description?: string
+
+    @IsNumber()
+    @IsOptional()
+    readonly capacity?: number
 
     @IsArray()
     readonly multimedia: Multimedia[]

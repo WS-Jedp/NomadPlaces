@@ -30,6 +30,7 @@ import { PlaceRepository } from 'src/places/repository/place.repository';
 import { isImageOrVideo } from 'src/global/utils/media/validateMimeType';
 import { StorageService } from 'src/global/services/aws/storage/storage.service';
 import { cache } from 'joi';
+import { PLACE_NOISE_LEVEL } from 'src/global/models/noiseLevel/noiseLevel';
 
 @Injectable()
 export class PlaceSessionService {
@@ -507,6 +508,7 @@ export class PlaceSessionService {
 
     const users = await this.userRepository.findAllUsersIDIn(session.usersIDs);
     const allMindsetActions = this.getOnlyMindsetActions(actions);
+    const allNoiseLevelActions = this.getOnlyNoiseLevelActions(actions);
     const allSessionAmountofPeopleActions =
       this.getOnlyAmountOfPeopleActions(actions);
     const allPlaceStatusActions = this.getOnlyPlaceStatusActions(actions);
@@ -518,6 +520,7 @@ export class PlaceSessionService {
       sessionID: session.id,
       placeID: session.placeID,
       bestMindsetTo: this.getMindsetActionsPerMindset(allMindsetActions),
+      noiseLevel: this.getNoiseLevelActionsPerOption(allNoiseLevelActions),
       lastActions: actions.slice(0, MAX_ACTIONS_PER_CACHED_SESSION),
       lastRecentlyActivities: recentActivities,
       lastUpdate:
@@ -578,6 +581,15 @@ export class PlaceSessionService {
     );
   }
 
+  private getOnlyNoiseLevelActions(actions: PlaceSessionActions[]) {
+    return actions.filter(
+      (action) =>
+        action.type === PLACE_SESSION_ACTIONS_ENUM.UPDATE &&
+        JSON.parse(action.payload.toString()).type ===
+          UPDATE_ACTIONS.NOISE_LEVEL,
+    );
+  }
+
   private getOnlyPlaceStatusActions(actions: PlaceSessionActions[]) {
     return actions.filter(
       (action) =>
@@ -620,6 +632,36 @@ export class PlaceSessionService {
   ): PLACE_MINDSET_ENUM {
     const payload = JSON.parse(action.payload.toString()).data
       .data as UpdateActionData['PLACE_MINDSET'];
+    return payload;
+  }
+
+  private getNoiseLevelActionsPerOption(actions: PlaceSessionActions[]) {
+    const AVAILABLE_NOISE_LEVELS = [
+      PLACE_NOISE_LEVEL.VERY_QUIET,
+      PLACE_NOISE_LEVEL.QUITE,
+      PLACE_NOISE_LEVEL.MODERATE,
+      PLACE_NOISE_LEVEL.LOUD,
+      PLACE_NOISE_LEVEL.VERY_LOUD,
+    ];
+    const mindsetActionsPerMindset = AVAILABLE_NOISE_LEVELS.map(
+      (noiseLevel) => {
+        return {
+          noiseLevel,
+          actions: actions.filter(
+            (action) => this.getNoiseLevelPerOption(action) === noiseLevel,
+          ),
+        };
+      },
+    );
+
+    return mindsetActionsPerMindset;
+  }
+
+  private getNoiseLevelPerOption(
+    action: PlaceSessionActions,
+  ): PLACE_NOISE_LEVEL {
+    const payload = JSON.parse(action.payload.toString()).data
+      .data as UpdateActionData['NOISE_LEVEL'];
     return payload;
   }
 
@@ -913,6 +955,7 @@ export class PlaceSessionService {
         const newCachedData = await this.setSessionCacheData(placeID, {
           lastActions: [],
           amountOfPeople: null,
+          noiseLevel: null,
           usersInSession: [],
           bestMindsetTo: null,
           lastRecentlyActivities: [],

@@ -22,6 +22,7 @@ type PlaceMongoEntity = {
   description: string | null;
   confirmationStatus: PlaceConfirmationStatus;
   type: PlaceTypes[];
+  capacity?: number;
   languages: LANGUAGE_ENUM[];
   ambianceTags: AMBIENCE_TAG_ENUM[];
   themeTags: THEME_TAG_ENUM[];
