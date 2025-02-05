@@ -1028,6 +1028,22 @@ export class PlaceSessionService {
         }
         toUdpate.bestMindsetTo = [...cachedData.bestMindsetTo];
       }
+
+      if (actionPayload.type === UPDATE_ACTIONS.NOISE_LEVEL) {
+        const noiseLevel = actionPayload.data.data;
+        const noiseLevelAction = cachedData.noiseLevel.find(
+          (a) => a.noiseLevel === noiseLevel,
+        );
+        if (noiseLevelAction) {
+          noiseLevelAction.actions.unshift(action);
+        } else {
+          cachedData.noiseLevel.push({
+            noiseLevel,
+            actions: [action],
+          });
+        }
+        toUdpate.noiseLevel = [...cachedData.noiseLevel];
+      }
     }
     await this.updateSessionCacheData(placeID, toUdpate);
     return cachedData.lastActions;
